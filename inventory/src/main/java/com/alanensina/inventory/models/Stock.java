@@ -6,6 +6,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Data
@@ -24,5 +25,7 @@ public class Stock {
     @JoinColumn(name = "product_id")
     private Product product;
     private int quantity;
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
 
 }

@@ -5,5 +5,5 @@ public enum ReservationStatus {
     PAID,
     DELIVERING,
     DELIVERED,
-    CANCELED
+    CANCELLED
 }
