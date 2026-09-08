@@ -13,6 +13,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.UUID;
 
@@ -27,7 +28,7 @@ public class ProductService {
 
         validateProductName(productDTO.name());
 
-        var now = LocalDateTime.now();
+        var now = LocalDateTime.now(ZoneId.systemDefault());
         var newProduct = Product.builder()
                 .name(productDTO.name())
                 .active(productDTO.active())
@@ -48,15 +49,20 @@ public class ProductService {
                 .toList();
     }
 
-    public ProductDTO getProductById(UUID id) {
+    public ProductDTO getProductDTOById(UUID id) {
         var product = productRepository.findById(id)
                 .orElseThrow(() -> new ProductNotFoundException(id));
         return toDTO(product);
     }
 
+    public Product getProductById(UUID id) {
+        return productRepository.findById(id)
+                .orElseThrow(() -> new ProductNotFoundException(id));
+    }
+
     public ProductDTO updateProduct(UUID id, @Valid UpdateProductDTO productDTO) {
 
-        var product = getProductById(id);
+        var product = getProductDTOById(id);
 
         validateProductName(productDTO.name());
 
@@ -65,7 +71,7 @@ public class ProductService {
                 .name(productDTO.name())
                 .active(productDTO.active())
                 .createdAt(product.createdAt())
-                .updatedAt(LocalDateTime.now())
+                .updatedAt(LocalDateTime.now(ZoneId.systemDefault()))
                 .build();
 
         productRepository.save(updatedProduct);
@@ -75,7 +81,7 @@ public class ProductService {
     }
 
     public ProductDTO deleteById(UUID id) {
-        var product = getProductById(id);
+        var product = getProductDTOById(id);
         productRepository.deleteById(id);
         log.info("Product with id '" + id + "' has been deleted");
         return product;

@@ -31,7 +31,7 @@ public class ProductController {
 
     @GetMapping("/{id}")
     public ResponseEntity<ProductDTO> getProductByID(@PathVariable UUID id) {
-        return ResponseEntity.ok(productService.getProductById(id));
+        return ResponseEntity.ok(productService.getProductDTOById(id));
     }
 
     @PutMapping("/{id}")
