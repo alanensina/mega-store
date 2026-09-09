@@ -10,9 +10,23 @@ services:
       POSTGRES_USER: user
       POSTGRES_DB: inventory-service
     ports:
-      - "5432:5432"
+      - "5433:5432"
     networks:
       - inventory-service-postgres-network
 
+  customer-service-postgres:
+    image: postgres:14.2
+    container_name: customer-service-db-postgres
+    restart: always
+    environment:
+      POSTGRES_PASSWORD: password
+      POSTGRES_USER: user
+      POSTGRES_DB: customer-service
+    ports:
+      - "5434:5432"
+    networks:
+      - customer-service-postgres-network
+
 networks:
   inventory-service-postgres-network:
+  customer-service-postgres-network:
