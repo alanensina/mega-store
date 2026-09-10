@@ -24,6 +24,7 @@ public class AuthenticationService {
             return customerService.toDTO(customer);
         }
 
+        log.warn("Invalid login attempt for username: {}", loginDTO.username());
         throw new InvalidCredentialsException(loginDTO.username());
     }
 
