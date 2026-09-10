@@ -1,6 +1,6 @@
 CREATE TABLE RESERVATION (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-    order_id uuid UNIQUE,
+    cart_id uuid UNIQUE,
     status VARCHAR(50),
     reserved_at TIMESTAMP,
     updated_at TIMESTAMP

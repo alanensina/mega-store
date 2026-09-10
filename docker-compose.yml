@@ -27,6 +27,20 @@ services:
     networks:
       - customer-service-postgres-network
 
+  order-service-postgres:
+    image: postgres:14.2
+    container_name: order-service-db-postgres
+    restart: always
+    environment:
+      POSTGRES_PASSWORD: password
+      POSTGRES_USER: user
+      POSTGRES_DB: order-service
+    ports:
+      - "5435:5432"
+    networks:
+      - order-service-postgres-network
+
 networks:
   inventory-service-postgres-network:
   customer-service-postgres-network:
+  order-service-postgres-network:

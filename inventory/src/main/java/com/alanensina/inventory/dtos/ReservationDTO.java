@@ -7,7 +7,7 @@ import java.util.UUID;
 
 public record ReservationDTO(
         UUID id,
-        UUID orderId,
+        UUID cartId,
         List<ReservationItemDTO> items,
         ReservationStatus status
 ) {

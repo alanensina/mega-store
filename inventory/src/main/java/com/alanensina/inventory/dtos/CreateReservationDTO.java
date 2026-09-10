@@ -4,7 +4,7 @@ import java.util.List;
 import java.util.UUID;
 
 public record CreateReservationDTO(
-        UUID orderId,
+        UUID cartId,
         List<ReservationItemDTO> items
 ) {
 }

@@ -32,7 +32,7 @@ public class Reservation {
     @GeneratedValue
     private UUID id;
 
-    private UUID orderId;
+    private UUID cartId;
 
     @OneToMany(mappedBy = "reservation", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<ReservationItem> items = new ArrayList<>();

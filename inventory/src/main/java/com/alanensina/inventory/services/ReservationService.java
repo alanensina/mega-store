@@ -41,7 +41,7 @@ public class ReservationService {
         var now = LocalDateTime.now(ZoneId.systemDefault());
 
         var reservation = Reservation.builder()
-                .orderId(reservationDTO.orderId())
+                .cartId(reservationDTO.cartId())
                 .items(items)
                 .reservedAt(now)
                 .updatedAt(now)
@@ -128,7 +128,7 @@ public class ReservationService {
     private ReservationDTO toDTO(Reservation reservation, ArrayList<ReservationItemDTO> itemsDTO) {
         return new ReservationDTO(
                 reservation.getId(),
-                reservation.getOrderId(),
+                reservation.getCartId(),
                 itemsDTO,
                 reservation.getStatus()
         );

@@ -1,4 +1,4 @@
-package com.alanensina.inventory.configs;
+package com.alanensina.inventory.configurations;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;

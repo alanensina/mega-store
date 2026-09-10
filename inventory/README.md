@@ -117,10 +117,10 @@ Reservations
 - POST /api/reservation
   - Request:
     {
-      "orderId": "<order-uuid>",
+      "cartId": "<cart-uuid>",
       "items": [ { "productId": "<product-uuid>", "quantity": 2 }, ... ]
     }
-  - Response: ReservationDTO { id, orderId, items, status }
+  - Response: ReservationDTO { id, cartId, items, status }
 
 - PUT /api/reservation/cancel/{id}
   - Cancels a reservation and (depending on logic) restores stock.
@@ -150,4 +150,4 @@ Create reservation:
 
 curl -X POST http://localhost:8080/api/reservation \
   -H "Content-Type: application/json" \
-  -d '{"orderId":"<order-uuid>","items":[{"productId":"<product-uuid>","quantity":2}]}'
+  -d '{"cartId":"<cart-uuid>","items":[{"productId":"<product-uuid>","quantity":2}]}'
