@@ -63,6 +63,11 @@ public class CustomerService {
         return toDTO(customer);
     }
 
+    public Customer getCustomerByUsername(String username) {
+        return customerRepository.findByUsernameIgnoreCase(username)
+                .orElseThrow(() -> new CustomerNotFoundException(username));
+    }
+
     public CustomerDTO update(@Valid UpdateCustomerDTO customerDTO) {
         var oldCustomer = customerRepository.findById(customerDTO.id())
                 .orElseThrow(() -> new CustomerNotFoundException(customerDTO.id()));
@@ -88,7 +93,7 @@ public class CustomerService {
         return toDTO(updatedCustomer);
     }
 
-    private CustomerDTO toDTO(Customer savedCustomer) {
+    public CustomerDTO toDTO(Customer savedCustomer) {
         return new CustomerDTO(
                 savedCustomer.getId(),
                 savedCustomer.getName(),

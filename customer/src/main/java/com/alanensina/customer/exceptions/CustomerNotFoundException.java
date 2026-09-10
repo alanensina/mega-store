@@ -14,4 +14,8 @@ public class CustomerNotFoundException extends RuntimeException {
         super(String.format("Customer with id '%s' not found", id));
     }
 
+    public CustomerNotFoundException(String username) {
+        super(String.format("Customer with username '%s' not found", username));
+    }
+
 }
