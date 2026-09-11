@@ -60,14 +60,14 @@ public class ProductService {
                 .orElseThrow(() -> new ProductNotFoundException(id));
     }
 
-    public ProductDTO updateProduct(UUID id, @Valid UpdateProductDTO productDTO) {
+    public ProductDTO updateProduct(@Valid UpdateProductDTO productDTO) {
 
-        var product = getProductDTOById(id);
+        var product = getProductDTOById(productDTO.id());
 
         validateProductName(productDTO.name());
 
         var updatedProduct = Product.builder()
-                .id(id)
+                .id(productDTO.id())
                 .name(productDTO.name())
                 .active(productDTO.active())
                 .createdAt(product.createdAt())
@@ -76,7 +76,7 @@ public class ProductService {
 
         productRepository.save(updatedProduct);
 
-        log.info("Product with id '" + id + "' has been updated");
+        log.info("Product with id '" + productDTO.id() + "' has been updated");
         return toDTO(updatedProduct);
     }
 

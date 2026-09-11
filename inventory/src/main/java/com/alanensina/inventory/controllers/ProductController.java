@@ -34,9 +34,9 @@ public class ProductController {
         return ResponseEntity.ok(productService.getProductDTOById(id));
     }
 
-    @PutMapping("/{id}")
-    public ResponseEntity<ProductDTO> updateProduct(@PathVariable UUID id, @Valid @RequestBody UpdateProductDTO productDTO) {
-        return ResponseEntity.ok(productService.updateProduct(id, productDTO));
+    @PutMapping()
+    public ResponseEntity<ProductDTO> updateProduct(@Valid @RequestBody UpdateProductDTO productDTO) {
+        return ResponseEntity.ok(productService.updateProduct(productDTO));
     }
 
     @DeleteMapping("/{id}")

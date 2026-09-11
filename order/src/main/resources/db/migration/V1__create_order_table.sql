@@ -2,9 +2,9 @@ CREATE TABLE CART (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   customer_id UUID NOT NULL,
   total_price NUMERIC(12,2) NOT NULL,
-  status VARCHAR(15) NOT NULL,
-  created_at TIMESTAMP NOT NULL,
-  updated_at TIMESTAMP NOT NULL
+  status VARCHAR(25) NOT NULL,
+  created_at TIMESTAMP,
+  updated_at TIMESTAMP
 );
 
 CREATE TABLE ITEM (

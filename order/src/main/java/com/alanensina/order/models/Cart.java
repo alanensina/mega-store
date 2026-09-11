@@ -26,6 +26,7 @@ public class Cart {
 
     private UUID customerId;
     private BigDecimal totalPrice;
+    @Enumerated(EnumType.STRING)
     private OrderStatus status;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
