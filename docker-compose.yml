@@ -63,9 +63,9 @@ services:
       KAFKA_MIN_IN_SYNC_REPLICAS: 1
       KAFKA_SHARE_COORDINATOR_STATE_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_SHARE_COORDINATOR_STATE_TOPIC_MIN_ISR: 1
-
-networks:
-  inventory-service-postgres-network:
-  customer-service-postgres-network:
-  order-service-postgres-network:
-  kafka-network:
+      
+  networks:
+    inventory-service-postgres-network:
+    customer-service-postgres-network:
+    order-service-postgres-network:
+    kafka-network:
