@@ -1,14 +1,14 @@
 package com.alanensina.order.services;
 
-import com.alanensina.order.dtos.CartDTO;
-import com.alanensina.order.dtos.CreateCartDTO;
-import com.alanensina.order.dtos.ItemDTO;
-import com.alanensina.order.dtos.UpdateCartDTO;
-import com.alanensina.order.enums.OrderStatus;
+import com.alanensina.order.dtos.*;
+import com.alanensina.order.enums.OrderEventType;
+import com.alanensina.order.enums.ReservationStatus;
 import com.alanensina.order.exceptions.CartNotFoundException;
 import com.alanensina.order.models.Cart;
 import com.alanensina.order.models.Item;
+import com.alanensina.order.producers.OrderProducer;
 import com.alanensina.order.repositories.CartRepository;
+import jakarta.transaction.Transactional;
 import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -22,13 +22,18 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
+import static com.alanensina.order.enums.OrderEventType.CREATE;
+import static com.alanensina.order.enums.OrderEventType.UPDATE;
+
 @Service
 @AllArgsConstructor
 @Slf4j
 public class CartService {
 
     private final CartRepository cartRepository;
+    private final OrderProducer orderProducer;
 
+    @Transactional
     public CartDTO create(@Valid CreateCartDTO cartDTO) {
         List<Item> items = new ArrayList<>();
         var totalPrice = BigDecimal.ZERO;
@@ -39,7 +44,7 @@ public class CartService {
                 .items(items)
                 .createdAt(now)
                 .updatedAt(now)
-                .status(OrderStatus.AWAITING_PAYMENT)
+                .status(ReservationStatus.AWAITING_PAYMENT)
                 .build();
 
         for (ItemDTO itemDTO : cartDTO.items()) {
@@ -58,7 +63,7 @@ public class CartService {
         cart = cartRepository.save(cart);
         log.info("Cart created with ID: {}", cart.getId());
 
-        // TODO: Send order to inventory
+        orderProducer.sendMessage(createOrderEventDTO(cart, CREATE));
 
         return toDTO(cart);
     }
@@ -76,6 +81,7 @@ public class CartService {
         return toDTO(order);
     }
 
+    @Transactional
     public CartDTO update(@Valid UpdateCartDTO cartDTO) {
         var existingCart = getOrderDTOById(cartDTO.id());
 
@@ -86,6 +92,7 @@ public class CartService {
                 .id(cartDTO.id())
                 .customerId(cartDTO.customerId())
                 .createdAt(existingCart.createdAt())
+                .updatedAt(LocalDateTime.now(ZoneId.systemDefault()))
                 .updatedAt(LocalDateTime.now(ZoneId.systemDefault()))
                 .status(cartDTO.status())
                 .items(newItems)
@@ -108,7 +115,7 @@ public class CartService {
         cartRepository.save(updatedCart);
         log.info("Cart updated with ID: {}", updatedCart.getId());
 
-        // TODO: Send order to inventory
+        orderProducer.sendMessage(createOrderEventDTO(updatedCart, UPDATE));
 
         return toDTO(updatedCart);
     }
@@ -137,6 +144,20 @@ public class CartService {
                         item.getQuantity(),
                         item.getPrice())
                 ).toList()
+        );
+    }
+
+    private OrderEventDTO createOrderEventDTO(Cart cart, OrderEventType type) {
+        return new OrderEventDTO(
+                type,
+                cart.getId(),
+                cart.getItems().stream().map(item -> new ReservationItem(
+                        item.getProductId(),
+                        item.getQuantity())
+                ).toList(),
+                cart.getStatus(),
+                cart.getCreatedAt(),
+                cart.getUpdatedAt()
         );
     }
 }

@@ -1,6 +1,6 @@
 package com.alanensina.order.enums;
 
-public enum OrderStatus {
+public enum ReservationStatus {
     AWAITING_PAYMENT,
     PAID,
     DELIVERING,

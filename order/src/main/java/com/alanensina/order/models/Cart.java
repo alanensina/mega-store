@@ -1,6 +1,6 @@
 package com.alanensina.order.models;
 
-import com.alanensina.order.enums.OrderStatus;
+import com.alanensina.order.enums.ReservationStatus;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -27,7 +27,7 @@ public class Cart {
     private UUID customerId;
     private BigDecimal totalPrice;
     @Enumerated(EnumType.STRING)
-    private OrderStatus status;
+    private ReservationStatus status;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 

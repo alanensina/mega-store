@@ -38,14 +38,13 @@ public class ReservationService {
 
         var items = new ArrayList<ReservationItem>();
         var itemsDTO = new ArrayList<ReservationItemDTO>();
-        var now = LocalDateTime.now(ZoneId.systemDefault());
 
         var reservation = Reservation.builder()
                 .cartId(reservationDTO.cartId())
                 .items(items)
-                .reservedAt(now)
-                .updatedAt(now)
-                .status(ReservationStatus.AWAITING_PAYMENT)
+                .reservedAt(reservationDTO.createdAt())
+                .updatedAt(reservationDTO.updatedAt())
+                .status(reservationDTO.status())
                 .build();
 
         for(ReservationItemDTO itemDTO : reservationDTO.items()) {

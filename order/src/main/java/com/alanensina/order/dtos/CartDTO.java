@@ -1,6 +1,6 @@
 package com.alanensina.order.dtos;
 
-import com.alanensina.order.enums.OrderStatus;
+import com.alanensina.order.enums.ReservationStatus;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -11,7 +11,7 @@ public record CartDTO(
         UUID id,
         UUID customerId,
         BigDecimal totalPrice,
-        OrderStatus status,
+        ReservationStatus status,
         LocalDateTime createdAt,
         LocalDateTime updatedAt,
         List<ItemDTO> items
