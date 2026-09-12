@@ -12,6 +12,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import lombok.ToString;
 
 import java.util.UUID;
 
@@ -29,6 +30,7 @@ public class ReservationItem {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "reservation_id", nullable = false)
+    @ToString.Exclude
     private Reservation reservation;
 
     @ManyToOne(fetch = FetchType.LAZY)
