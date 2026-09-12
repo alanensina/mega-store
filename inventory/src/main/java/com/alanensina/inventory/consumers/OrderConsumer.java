@@ -2,6 +2,7 @@ package com.alanensina.inventory.consumers;
 
 import com.alanensina.inventory.dtos.CreateReservationDTO;
 import com.alanensina.inventory.dtos.OrderEventDTO;
+import com.alanensina.inventory.dtos.ReservationItemDTO;
 import com.alanensina.inventory.exceptions.InvalidKafkaOrderEventTypeException;
 import com.alanensina.inventory.services.ReservationService;
 import lombok.AllArgsConstructor;
@@ -27,7 +28,9 @@ public class OrderConsumer {
             case CREATE:
                 reservationService.create(new CreateReservationDTO(
                         event.cartId(),
-                        event.items(),
+                        event.items().stream()
+                                .map(item -> new ReservationItemDTO(item.productId(), item.quantity()))
+                                .toList(),
                         event.status(),
                         event.createdAt(),
                         event.updatedAt()

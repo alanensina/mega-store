@@ -4,6 +4,6 @@ public enum ReservationStatus {
     AWAITING_PAYMENT,
     PAID,
     DELIVERING,
-    COMPLETE,
+    DELIVERED,
     CANCELLED
 }
