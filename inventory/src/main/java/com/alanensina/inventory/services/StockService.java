@@ -83,6 +83,7 @@ public class StockService {
         if(StockOperation.ADD.equals(operation)) {
             stock.setQuantity(stock.getQuantity() + quantity);
         }
+
         else if(StockOperation.REMOVE.equals(operation)) {
             var newQuantity = stock.getQuantity() - quantity;
 

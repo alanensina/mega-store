@@ -1,8 +1,6 @@
 package com.alanensina.inventory.consumers;
 
-import com.alanensina.inventory.dtos.CreateReservationDTO;
 import com.alanensina.inventory.dtos.OrderEventDTO;
-import com.alanensina.inventory.dtos.ReservationItemDTO;
 import com.alanensina.inventory.exceptions.InvalidKafkaOrderEventTypeException;
 import com.alanensina.inventory.services.ReservationService;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -30,22 +28,16 @@ public class OrderConsumer {
             switch(event.eventType()){
 
                 case CREATE:
-                    reservationService.create(new CreateReservationDTO(
-                            event.cartId(),
-                            event.items().stream()
-                                    .map(item -> new ReservationItemDTO(item.productId(), item.quantity()))
-                                    .toList(),
-                            event.status(),
-                            event.createdAt(),
-                            event.updatedAt()
-                    ));
+                    reservationService.create(event);
                     break;
 
-    //            case UPDATE:
-    //                break;
+                case UPDATE:
+                    reservationService.update(event);
+                    break;
 
-    //            case CANCEL:
-    //                break;
+                case CANCEL:
+                    reservationService.cancel(event);
+                    break;
 
                 default:
                     log.error("Unhandled event type: {}", event.eventType());

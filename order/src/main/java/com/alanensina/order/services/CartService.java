@@ -22,8 +22,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
-import static com.alanensina.order.enums.OrderEventType.CREATE;
-import static com.alanensina.order.enums.OrderEventType.UPDATE;
+import static com.alanensina.order.enums.OrderEventType.*;
 
 @Service
 @AllArgsConstructor
@@ -120,11 +119,16 @@ public class CartService {
         return toDTO(updatedCart);
     }
 
-    public CartDTO delete(UUID id) {
-        var dto = getOrderDTOById(id);
-        cartRepository.deleteById(id);
-        log.info("Cart deleted with ID: {}", id);
-        return dto;
+    public CartDTO cancel(UUID id) {
+        var cart = cartRepository.findById(id)
+                .orElseThrow(() -> new CartNotFoundException(id));
+        cart.setStatus(ReservationStatus.CANCELLED);
+        cartRepository.save(cart);
+
+        orderProducer.sendMessage(createOrderEventDTO(cart, CANCEL));
+
+        log.info("Cart cancelled with ID: {}", id);
+        return toDTO(cart);
     }
 
     private static @NonNull BigDecimal calculateTotalPricePerItem(ItemDTO itemDTO, BigDecimal totalPrice) {

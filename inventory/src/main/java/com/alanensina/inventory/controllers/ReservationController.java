@@ -16,11 +16,6 @@ public class ReservationController {
 
     private final ReservationService reservationService;
 
-    @PutMapping("/cancel/{id}")
-    public ResponseEntity<ReservationDTO> cancel(@PathVariable UUID id) {
-        return ResponseEntity.ok(reservationService.cancel(id));
-    }
-
     @GetMapping
     public ResponseEntity<List<ReservationDTO>> list() {
         return ResponseEntity.ok(reservationService.list());

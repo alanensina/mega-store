@@ -10,7 +10,7 @@ import java.util.UUID;
 public record OrderEventDTO(
         OrderEventType eventType,
         UUID cartId,
-        List<ReservationItem> items,
+        List<ReservationItemEvent> items,
         ReservationStatus status,
         LocalDateTime createdAt,
         LocalDateTime updatedAt

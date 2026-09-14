@@ -39,10 +39,8 @@ public class CartController {
         return ResponseEntity.ok(cartService.update(cartDTO));
     }
 
-    @DeleteMapping("/{id}")
-    public ResponseEntity<CartDTO> delete(@PathVariable UUID id) {
-        return ResponseEntity.ok(cartService.delete(id));
+    @PutMapping("/cancel/{id}")
+    public ResponseEntity<CartDTO> cancel(@PathVariable UUID id) {
+        return ResponseEntity.ok(cartService.cancel(id));
     }
-
-
 }

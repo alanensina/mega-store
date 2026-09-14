@@ -34,7 +34,7 @@ public class Reservation {
 
     private UUID cartId;
 
-    @OneToMany(mappedBy = "reservation", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(mappedBy = "reservation", cascade = CascadeType.ALL)
     private List<ReservationItem> items = new ArrayList<>();
 
     @Enumerated(EnumType.STRING)
