@@ -1,6 +1,7 @@
 package com.alanensina.order.services;
 
 import com.alanensina.order.dtos.*;
+import com.alanensina.order.enums.NotificationType;
 import com.alanensina.order.enums.OrderEventType;
 import com.alanensina.order.enums.ReservationStatus;
 import com.alanensina.order.exceptions.CartNotFoundException;
@@ -10,10 +11,14 @@ import com.alanensina.order.producers.OrderProducer;
 import com.alanensina.order.repositories.CartRepository;
 import jakarta.transaction.Transactional;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import com.alanensina.order.exceptions.CustomerDetailsFetchException;
 import org.jspecify.annotations.NonNull;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestClient;
+import org.springframework.web.client.RestClientException;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -22,8 +27,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
-import static com.alanensina.order.enums.OrderEventType.*;
-
 @Service
 @AllArgsConstructor
 @Slf4j
@@ -31,12 +34,14 @@ public class CartService {
 
     private final CartRepository cartRepository;
     private final OrderProducer orderProducer;
+    private static final String CUSTOMER_API_URL = "http://localhost:8081";
 
     @Transactional
     public CartDTO create(@Valid CreateCartDTO cartDTO) {
         List<Item> items = new ArrayList<>();
         var totalPrice = BigDecimal.ZERO;
         var now = LocalDateTime.now(ZoneId.systemDefault());
+        var customer = getCustomerDetails(cartDTO.customerId());
 
         var cart = Cart.builder()
                 .customerId(cartDTO.customerId())
@@ -62,7 +67,8 @@ public class CartService {
         cart = cartRepository.save(cart);
         log.info("Cart created with ID: {}", cart.getId());
 
-        orderProducer.sendMessage(createOrderEventDTO(cart, CREATE));
+        orderProducer.sendOrderMessage(createOrderEventDTO(cart, OrderEventType.CREATE));
+        orderProducer.sendNotificationMessage(createOrderNotificationEventDTO(cart, cart.getId(), customer, NotificationType.NEW_ORDER));
 
         return toDTO(cart);
     }
@@ -114,18 +120,21 @@ public class CartService {
         cartRepository.save(updatedCart);
         log.info("Cart updated with ID: {}", updatedCart.getId());
 
-        orderProducer.sendMessage(createOrderEventDTO(updatedCart, UPDATE));
+        orderProducer.sendOrderMessage(createOrderEventDTO(updatedCart, OrderEventType.UPDATE));
 
         return toDTO(updatedCart);
     }
 
+    @Transactional
     public CartDTO cancel(UUID id) {
         var cart = cartRepository.findById(id)
                 .orElseThrow(() -> new CartNotFoundException(id));
         cart.setStatus(ReservationStatus.CANCELLED);
-        cartRepository.save(cart);
+        var customer = getCustomerDetails(cart.getCustomerId());
 
-        orderProducer.sendMessage(createOrderEventDTO(cart, CANCEL));
+        cartRepository.save(cart);
+        orderProducer.sendOrderMessage(createOrderEventDTO(cart, OrderEventType.CANCEL));
+        orderProducer.sendNotificationMessage(createOrderNotificationEventDTO(cart, id, customer, NotificationType.CANCEL));
 
         log.info("Cart cancelled with ID: {}", id);
         return toDTO(cart);
@@ -162,6 +171,40 @@ public class CartService {
                 cart.getStatus(),
                 cart.getCreatedAt(),
                 cart.getUpdatedAt()
+        );
+    }
+
+    private CustomerDTO getCustomerDetails(@NotNull(message = "Customer ID is required") UUID uuid) {
+        try {
+            return RestClient.create(CUSTOMER_API_URL)
+                    .get()
+                    .uri("/api/customer/{id}", uuid)
+                    .retrieve()
+                    .body(CustomerDTO.class);
+        } catch (RestClientException ex) {
+            throw new CustomerDetailsFetchException(uuid, ex);
+        }
+    }
+
+    private NotificationDTO createOrderNotificationEventDTO(Cart cart, UUID orderId, CustomerDTO customer, NotificationType type) {
+        return new NotificationDTO(
+                customer.name(),
+                customer.email(),
+                orderId,
+                new CartDTO(
+                        cart.getId(),
+                        cart.getCustomerId(),
+                        cart.getTotalPrice(),
+                        cart.getStatus(),
+                        cart.getCreatedAt(),
+                        cart.getUpdatedAt(),
+                        cart.getItems().stream().map(item -> new ItemDTO(
+                                item.getProductId(),
+                                item.getQuantity(),
+                                item.getPrice())
+                        ).toList()
+                        ),
+                type
         );
     }
 }

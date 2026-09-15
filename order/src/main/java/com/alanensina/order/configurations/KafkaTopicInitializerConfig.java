@@ -17,31 +17,46 @@ public class KafkaTopicInitializerConfig implements ApplicationRunner {
 
 	private final JdbcTemplate jdbcTemplate;
 	private final String bootstrapServers;
-	private final String topic;
+	private final String ordersTopic;
+	private final String notificationTopic;
 
 	public KafkaTopicInitializerConfig(
 			JdbcTemplate jdbcTemplate,
 			@Value("${spring.kafka.bootstrap-servers:localhost:9094}") String bootstrapServers,
-			@Value("${app.kafka.topic:orders_topic}") String topic) {
+			@Value("${spring.kafka.orders.topic.name:orders_topic}") String ordersTopic,
+			@Value("${spring.kafka.orders.notification.topic.name:orders_notification}") String notificationTopic) {
 		this.jdbcTemplate = jdbcTemplate;
 		this.bootstrapServers = bootstrapServers;
-		this.topic = topic;
+		this.ordersTopic = ordersTopic;
+		this.notificationTopic = notificationTopic;
 	}
 
 	@Override
 	public void run(ApplicationArguments args) throws Exception {
-		if (isInitialized()) {
+		boolean ordersInitialized = isInitialized(ordersTopic);
+		boolean notificationInitialized = isInitialized(notificationTopic);
+		if (ordersInitialized && notificationInitialized) {
 			return;
 		}
 
 		executeScript();
-		jdbcTemplate.update(
-				"INSERT INTO topic_initialization (topic_name, initialized_at) VALUES (?, ?)",
-				topic,
-				Timestamp.from(Instant.now()));
+
+		Timestamp now = Timestamp.from(Instant.now());
+		if (!ordersInitialized) {
+			jdbcTemplate.update(
+					"INSERT INTO topic_initialization (topic_name, initialized_at) VALUES (?, ?)",
+					ordersTopic,
+					now);
+		}
+		if (!notificationInitialized) {
+			jdbcTemplate.update(
+					"INSERT INTO topic_initialization (topic_name, initialized_at) VALUES (?, ?)",
+					notificationTopic,
+					now);
+		}
 	}
 
-	private boolean isInitialized() {
+	private boolean isInitialized(String topic) {
 		Integer count = jdbcTemplate.queryForObject(
 				"SELECT COUNT(*) FROM topic_initialization WHERE topic_name = ?",
 				Integer.class,
@@ -61,7 +76,8 @@ public class KafkaTopicInitializerConfig implements ApplicationRunner {
 	private Process createProcess(String script) throws IOException {
 		ProcessBuilder processBuilder = new ProcessBuilder("/bin/sh", "-c", script);
 		processBuilder.environment().put("KAFKA_BOOTSTRAP_SERVERS", bootstrapServers);
-		processBuilder.environment().put("KAFKA_TOPIC", topic);
+		// export comma-separated topics for the script
+		processBuilder.environment().put("KAFKA_TOPICS", ordersTopic + "," + notificationTopic);
 		processBuilder.inheritIO();
 		return processBuilder.start();
 	}
