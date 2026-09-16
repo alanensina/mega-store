@@ -2,6 +2,7 @@ package com.alanensina.inventory.consumers;
 
 import com.alanensina.inventory.dtos.OrderEventDTO;
 import com.alanensina.inventory.exceptions.InvalidKafkaOrderEventTypeException;
+import com.alanensina.inventory.exceptions.KafkaErrorException;
 import com.alanensina.inventory.services.ReservationService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.AllArgsConstructor;
@@ -45,7 +46,7 @@ public class OrderConsumer {
             }
         } catch (Exception e) {
             log.error("Error processing Kafka message: {}", message, e);
-            throw new RuntimeException("Invalid order event payload", e);
+            throw new KafkaErrorException(e.getMessage());
         }
     }
 }

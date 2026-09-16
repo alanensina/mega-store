@@ -18,7 +18,7 @@ public class KafkaConsumerConfig {
     public ConsumerFactory<String, String> consumerFactory() {
         Map<String, Object> props = new HashMap<>();
         props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9094");
-        props.put(ConsumerConfig.GROUP_ID_CONFIG, "inventory");
+        props.put(ConsumerConfig.GROUP_ID_CONFIG, "notification");
         props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
 
         return new DefaultKafkaConsumerFactory<>(

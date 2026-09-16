@@ -4,14 +4,13 @@ import com.alanensina.notification.dtos.NotificationDTO;
 import com.alanensina.notification.exceptions.EmailErrorException;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.jspecify.annotations.NonNull;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpStatus;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Service;
 
 @Service
-@AllArgsConstructor
 @Slf4j
 public class EmailService {
 
@@ -25,11 +24,27 @@ public class EmailService {
     }
 
     public void sendWelcomeEmail(NotificationDTO event) {
+        sendEmail(
+                event,
+                getNewOrderSubject(event),
+                getNewOrderTextMessage(event)
+        );
+    }
+
+    public void sendCancellationEmail(NotificationDTO event) {
+        sendEmail(
+                event,
+                getCancellationSubject(event),
+                getCancellationText(event)
+        );
+    }
+
+    private void sendEmail(NotificationDTO event, String subject, String text) {
         try {
             SimpleMailMessage message = new SimpleMailMessage();
             message.setTo(event.email());
-            message.setSubject("New order placed: ID" + event.orderId());
-            message.setText(getNewOrderTextMessage(event));
+            message.setSubject(subject);
+            message.setText(text);
             sender.send(message);
         } catch (Exception e) {
             log.error("Error sending email: " + e.getMessage());
@@ -37,27 +52,38 @@ public class EmailService {
         }
     }
 
-    public void sendCancellationEmail(NotificationDTO event) {
+    private static @NonNull String getNewOrderSubject(NotificationDTO event) {
+        return "New order placed: ID" + event.cart().id();
     }
 
-    private String getNewOrderTextMessage(NotificationDTO dto) {
+    private static @NonNull String getCancellationSubject(NotificationDTO event) {
+        return "Order cancelled: ID" + event.cart().id();
+    }
 
+    private String getNewOrderTextMessage(NotificationDTO event) {
         String header = """
                 Hello %s
-                
                 Your order has been placed!
-                Check the list of items below:
-                
-                """.formatted(dto.name());
+                """.formatted(event.name());
 
         StringBuilder message = new StringBuilder(header);
         message.append("\n");
-        message.append("Total price: ").append(dto.cart().totalPrice()).append("€").append("\n");
+        message.append("Order ID: ").append(event.cart().id()).append("\n");
+        message.append("Total price: ").append(event.cart().totalPrice()).append("€").append("\n");
         message.append("Thank you!");
-
         return message.toString();
     }
 
+    private String getCancellationText(NotificationDTO event) {
+        String header = """
+                Hello %s
+                Your order has been cancelled!
+                """.formatted(event.name());
 
-
+        StringBuilder message = new StringBuilder(header);
+        message.append("\n");
+        message.append("Order ID: ").append(event.cart().id()).append("\n");
+        message.append("Thank you!");
+        return message.toString();
+    }
 }
