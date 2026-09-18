@@ -16,12 +16,15 @@ public class AuthenticationService {
 
     private final PasswordEncryptionService passwordEncryptionService;
     private final CustomerService customerService;
+    private final JwtService jwtService;
 
-    public CustomerDTO login(@Valid LoginDTO loginDTO) {
+    public com.alanensina.customer.dtos.AuthenticationResponse login(@Valid LoginDTO loginDTO) {
         var customer = customerService.getCustomerByUsername(loginDTO.username());
 
-        if(validatePassword(loginDTO, customer)) {
-            return customerService.toDTO(customer);
+        if (validatePassword(loginDTO, customer)) {
+            var dto = customerService.toDTO(customer);
+            var token = jwtService.generateToken(customer);
+            return new com.alanensina.customer.dtos.AuthenticationResponse(dto, token);
         }
 
         log.warn("Invalid login attempt for username: {}", loginDTO.username());

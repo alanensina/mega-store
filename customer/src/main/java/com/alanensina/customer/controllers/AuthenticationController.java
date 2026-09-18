@@ -1,8 +1,9 @@
 package com.alanensina.customer.controllers;
 
-import com.alanensina.customer.dtos.CustomerDTO;
 import com.alanensina.customer.dtos.LoginDTO;
+import com.alanensina.customer.dtos.AuthenticationResponse;
 import com.alanensina.customer.services.AuthenticationService;
+import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -18,8 +19,9 @@ public class AuthenticationController {
 
     private final AuthenticationService authenticationService;
 
+    @Operation(summary = "(no auth required)", security = {})
     @PostMapping()
-    public ResponseEntity<CustomerDTO> login(@Valid @RequestBody LoginDTO loginDTO) {
+    public ResponseEntity<AuthenticationResponse> login(@Valid @RequestBody LoginDTO loginDTO) {
         return ResponseEntity.ok(authenticationService.login(loginDTO));
     }
 }

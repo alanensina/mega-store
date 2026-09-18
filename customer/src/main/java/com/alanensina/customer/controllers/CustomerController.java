@@ -4,6 +4,7 @@ import com.alanensina.customer.dtos.CreateCustomerDTO;
 import com.alanensina.customer.dtos.CustomerDTO;
 import com.alanensina.customer.dtos.UpdateCustomerDTO;
 import com.alanensina.customer.services.CustomerService;
+import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -19,6 +20,7 @@ public class CustomerController {
 
     private final CustomerService customerService;
 
+    @Operation(summary = "(no auth required)", security = {})
     @PostMapping
     public ResponseEntity<CustomerDTO> create(@Valid @RequestBody CreateCustomerDTO customerDTO) {
         return ResponseEntity.ok(customerService.create(customerDTO));
