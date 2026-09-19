@@ -17,6 +17,9 @@ import lombok.extern.slf4j.Slf4j;
 import com.alanensina.order.exceptions.CustomerDetailsFetchException;
 import org.jspecify.annotations.NonNull;
 import org.springframework.stereotype.Service;
+import org.springframework.http.HttpHeaders;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
 
@@ -176,9 +179,19 @@ public class CartService {
 
     private CustomerDTO getCustomerDetails(@NotNull(message = "Customer ID is required") UUID uuid) {
         try {
+            var requestAttributes = RequestContextHolder.getRequestAttributes();
+            var authorization = requestAttributes instanceof ServletRequestAttributes servletAttributes
+                    ? servletAttributes.getRequest().getHeader(HttpHeaders.AUTHORIZATION)
+                    : null;
+
             return RestClient.create(CUSTOMER_API_URL)
                     .get()
                     .uri("/api/customer/{id}", uuid)
+                    .headers(headers -> {
+                        if (authorization != null) {
+                            headers.set(HttpHeaders.AUTHORIZATION, authorization);
+                        }
+                    })
                     .retrieve()
                     .body(CustomerDTO.class);
         } catch (RestClientException ex) {
