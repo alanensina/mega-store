@@ -30,11 +30,20 @@ Services
 
 How they interact
 -----------------
-1. Clients call the Order service to create/update a cart.
-2. Order service publishes events to Kafka (orders_topic / orders_notification).
-3. Inventory service can consume product/reservation events or be called directly to reserve stock.
-4. Notification service consumes notification events and sends emails to customers.
-5. Customer service stores customer data; Order service may call it to enrich notifications.
+1. Clients authenticate through `POST /api/auth` on the Customer service and receive a signed JWT.
+2. Clients send that JWT as `Authorization: Bearer <jwt-token>` when calling the protected Order and Inventory APIs.
+3. The Order service publishes events to Kafka (orders_topic / orders_notification).
+4. Inventory service can consume product/reservation events or be called directly to reserve stock.
+5. Notification service consumes notification events and sends emails to customers.
+6. Customer service stores customer data; Order service may call it to enrich notifications.
+
+Spring Security
+---------------
+Customer, Order, and Inventory use Spring Security with JWT authentication. Customer is the token issuer; Order and Inventory validate the same token locally using the shared `jwt.secret`. Product, Stock, Reservation, and Cart endpoints require that token, while Customer login/registration, Swagger UI/OpenAPI, and health/info actuator endpoints are public as configured by each service.
+
+The Order service propagates the original Bearer token when `CartService` calls the protected Customer endpoint to retrieve customer details. This preserves a single authentication flow and avoids creating a separate service token.
+
+Each protected service exposes a `bearerAuth` scheme in Swagger UI. Use **Authorize** with the token returned by Customer `/api/auth` before making protected requests.
 
 Requirements
 ------------
@@ -76,6 +85,7 @@ Each service exposes configuration in src/main/resources/application.properties.
 - spring.datasource.url / username / password (database connection)
 - Kafka bootstrap servers and topic names (default: localhost:9094)
 - For notification: spring.mail.* (SMTP host, username and App Password)
+- JWT: `jwt.secret` must be the same in customer, inventory, and order
 
 Useful endpoints
 ----------------
@@ -97,4 +107,3 @@ Each service has its own README in its folder with detailed API examples, DTOs, 
 - inventory/README.md
 - order/README.md
 - notification/README.md
-

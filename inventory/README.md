@@ -18,6 +18,8 @@ A small Spring Boot microservice that manages products, stock and reservations. 
 - PostgreSQL (runtime)
 - Maven
 - Lombok
+- Spring Security with JWT authentication
+- Auth0 Java JWT
 - springdoc-openapi (Swagger UI)
 
 ## Project structure (important files)
@@ -55,9 +57,23 @@ spring.flyway.enabled=true
 spring.flyway.locations=classpath:db/migration
 spring.jpa.hibernate.ddl-auto=none
 
+jwt.secret=changeit
+
 Swagger/OpenAPI:
 - Swagger UI: /swagger-ui
 - OpenAPI JSON: /v3/api-docs
+
+## Security
+
+All Product, Stock, and Reservation API endpoints require a valid JWT issued by the Customer API `POST /api/auth` endpoint. The Inventory service validates the token locally using the same `jwt.secret`; it does not issue or accept a separate Inventory token.
+
+Send the token in every protected request:
+
+```text
+Authorization: Bearer <jwt-token>
+```
+
+Swagger UI and the OpenAPI document are public. Click **Authorize** in Swagger UI and provide the JWT returned by the Customer API login before executing Product, Stock, or Reservation requests. Health and info actuator endpoints remain public.
 
 ## Build and run
 
@@ -138,16 +154,19 @@ Create a product:
 
 curl -X POST http://localhost:8080/api/product \
   -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <jwt-token>" \
   -d '{"name":"T-shirt","active":true}'
 
 Create stock:
 
 curl -X POST http://localhost:8080/api/stock \
   -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <jwt-token>" \
   -d '{"productId":"<product-uuid>","quantity":100}'
 
 Create reservation:
 
 curl -X POST http://localhost:8080/api/reservation \
   -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <jwt-token>" \
   -d '{"cartId":"<cart-uuid>","items":[{"productId":"<product-uuid>","quantity":2}]}'

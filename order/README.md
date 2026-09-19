@@ -42,8 +42,23 @@ Configuration keys are in src/main/resources/application.properties (overridable
 - spring.kafka.producer.bootstrap-servers / spring.kafka.bootstrap-servers
 - spring.kafka.orders.topic.name (default orders_topic)
 - spring.kafka.orders.notification.topic.name (default orders_notification)
+- jwt.secret (must match the Customer API signing secret)
 
 Important: The service expects a Customer API at http://localhost:8081/api/customer/{id} to fetch customer name/email used in notifications. If unavailable, customer fetch errors will be raised.
+
+## Security
+
+The Cart API is protected by Spring Security and JWT authentication. The only accepted token is the JWT issued by the Customer API `POST /api/auth` endpoint. The Order service validates the token locally with the shared `jwt.secret`.
+
+Send the token in every Cart API request:
+
+```text
+Authorization: Bearer <jwt-token>
+```
+
+Swagger UI and the OpenAPI document are public. Use the **Authorize** button in Swagger UI with the JWT returned by the Customer API before executing Cart requests. Health and info actuator endpoints remain public.
+
+When `CartService` calls `GET http://localhost:8081/api/customer/{id}`, it forwards the original `Authorization` header. The Customer API validates the same customer-issued token, so no separate service token is required.
 
 Database migrations
 -------------------

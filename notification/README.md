@@ -121,6 +121,10 @@ The service will start on:
 
 This project does not expose a REST CRUD API. Its main function is to consume Kafka events and send emails asynchronously.
 
+## Security
+
+The Notification service does not expose client-facing REST endpoints and therefore does not participate in the JWT authentication flow used by Customer, Order, and Inventory. It consumes notification events from Kafka and should be protected through the broker's network and authentication configuration in deployment environments.
+
 ## Example flow
 
 1. A customer creates an order through the order service.

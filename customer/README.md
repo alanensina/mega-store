@@ -20,6 +20,7 @@ Customer API is a Spring Boot REST service for managing customer records and aut
 - PostgreSQL
 - Flyway
 - Spring Security Crypto (BCrypt)
+- Spring Security with JWT authentication
 - SpringDoc OpenAPI / Swagger UI
 - Maven
 
@@ -56,12 +57,28 @@ springdoc.api-docs.enabled=true
 springdoc.swagger-ui.enabled=true
 springdoc.swagger-ui.path=/swagger-ui
 springdoc.api-docs.path=/v3/api-docs
+
+jwt.secret=changeit
+jwt.expiration-ms=3600000
 ```
 
 Notes:
 
 - The project expects PostgreSQL running locally on port `5434`.
 - Flyway applies the migration automatically when the application starts.
+
+## Security
+
+Customer authentication is implemented with Spring Security and signed JWTs:
+
+- `POST /api/auth` is public and authenticates a customer by username and password.
+- A successful login returns an `AuthenticationResponse` containing the customer data and a JWT.
+- `POST /api/customer` is public for customer registration.
+- The remaining customer endpoints require `Authorization: Bearer <token>`.
+- Tokens are signed with `jwt.secret` and expire according to `jwt.expiration-ms` (one hour by default).
+- Invalid, expired, or missing tokens are rejected by the JWT authentication filter.
+
+Swagger UI and the OpenAPI document are public so the API can be explored. Use the **Authorize** button in Swagger UI and enter the JWT returned by `/api/auth` as a Bearer token before calling protected endpoints.
 
 ## Running the application
 
@@ -104,12 +121,15 @@ Successful response:
 
 ```json
 {
-  "id": "c7d0d8a3-4d3e-4f8b-9a2a-f73d1c4f0f21",
-  "name": "John Doe",
-  "email": "john@example.com",
-  "username": "john",
-  "createdAt": "2026-09-10T12:00:00",
-  "updatedAt": "2026-09-10T12:00:00"
+  "customer": {
+    "id": "c7d0d8a3-4d3e-4f8b-9a2a-f73d1c4f0f21",
+    "name": "John Doe",
+    "email": "john@example.com",
+    "username": "john",
+    "createdAt": "2026-09-10T12:00:00",
+    "updatedAt": "2026-09-10T12:00:00"
+  },
+  "token": "<jwt-token>"
 }
 ```
 
@@ -215,7 +235,8 @@ curl -X POST http://localhost:8081/api/auth \
 Get all customers:
 
 ```bash
-curl http://localhost:8081/api/customer
+curl http://localhost:8081/api/customer \
+  -H "Authorization: Bearer <jwt-token>"
 ```
 
 ## Summary
