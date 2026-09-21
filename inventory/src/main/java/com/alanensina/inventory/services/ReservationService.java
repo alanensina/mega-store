@@ -3,8 +3,6 @@ package com.alanensina.inventory.services;
 import com.alanensina.inventory.dtos.*;
 import com.alanensina.inventory.enums.ReservationStatus;
 import com.alanensina.inventory.enums.StockOperation;
-import com.alanensina.inventory.exceptions.ProductNotAvailableForReservationException;
-import com.alanensina.inventory.exceptions.ReservationAlreadyCancelledException;
 import com.alanensina.inventory.exceptions.ReservationNotFoundException;
 import com.alanensina.inventory.models.Product;
 import com.alanensina.inventory.models.Reservation;
@@ -20,6 +18,7 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
 
@@ -35,6 +34,10 @@ public class ReservationService {
 
     @Transactional
     public ReservationDTO create(@Valid OrderEventDTO event) {
+        var existingReservation = reservationRepository.findByCartId(event.cartId());
+        if (existingReservation.isPresent()) {
+            return toDTO(existingReservation.get(), toItemDTOs(existingReservation.get()));
+        }
 
         var items = new ArrayList<ReservationItem>();
         var itemsDTO = new ArrayList<ReservationItemDTO>();
@@ -47,24 +50,18 @@ public class ReservationService {
                 .status(event.status())
                 .build();
 
-        for(ReservationItemEvent itemDTO : event.items()) {
+        for (ReservationItemEvent itemDTO : sortedItems(event)) {
+            Product product = productService.getProductById(itemDTO.productId());
+            removeItemFromStock(itemDTO);
 
-            if(isProductInStock(itemDTO)) {
-                Product product = productService.getProductById(itemDTO.productId());
+            var item = ReservationItem.builder()
+                    .product(product)
+                    .quantity(itemDTO.quantity())
+                    .reservation(reservation)
+                    .build();
 
-                var item = ReservationItem.builder()
-                        .product(product)
-                        .quantity(itemDTO.quantity())
-                        .reservation(reservation)
-                        .build();
-
-                items.add(item);
-                itemsDTO.add(new ReservationItemDTO(itemDTO.productId(), itemDTO.quantity()));
-
-                removeItemFromStock(itemDTO);
-            } else {
-                throw new ProductNotAvailableForReservationException(itemDTO.productId());
-            }
+            items.add(item);
+            itemsDTO.add(new ReservationItemDTO(itemDTO.productId(), itemDTO.quantity()));
         }
 
         reservation = reservationRepository.save(reservation);
@@ -89,24 +86,18 @@ public class ReservationService {
         oldReservation.setUpdatedAt(event.updatedAt());
         oldReservation.setStatus(event.status());
 
-        for(ReservationItemEvent itemDTO : event.items()) {
+        for (ReservationItemEvent itemDTO : sortedItems(event)) {
+            Product product = productService.getProductById(itemDTO.productId());
+            removeItemFromStock(itemDTO);
 
-            if(isProductInStock(itemDTO)) {
-                Product product = productService.getProductById(itemDTO.productId());
+            var item = ReservationItem.builder()
+                    .product(product)
+                    .quantity(itemDTO.quantity())
+                    .reservation(oldReservation)
+                    .build();
 
-                var item = ReservationItem.builder()
-                        .product(product)
-                        .quantity(itemDTO.quantity())
-                        .reservation(oldReservation)
-                        .build();
-
-                items.add(item);
-                itemsDTO.add(new ReservationItemDTO(itemDTO.productId(), itemDTO.quantity()));
-
-                removeItemFromStock(itemDTO);
-            } else {
-                throw new ProductNotAvailableForReservationException(itemDTO.productId());
-            }
+            items.add(item);
+            itemsDTO.add(new ReservationItemDTO(itemDTO.productId(), itemDTO.quantity()));
         }
 
         oldReservation.setItems(items);
@@ -121,8 +112,8 @@ public class ReservationService {
         var reservation = reservationRepository.findByCartId(event.cartId())
                 .orElseThrow(() -> new ReservationNotFoundException(event.cartId()));
 
-        if(ReservationStatus.CANCELLED.equals(reservation.getStatus())) {
-            throw new ReservationAlreadyCancelledException(event.cartId());
+        if (ReservationStatus.CANCELLED.equals(reservation.getStatus())) {
+            return toDTO(reservation, toItemDTOs(reservation));
         }
 
         reservation.setStatus(ReservationStatus.CANCELLED);
@@ -184,7 +175,7 @@ public class ReservationService {
         log.info("Reservation items cleared for reservation ID: {}", id);
     }
 
-    private ReservationDTO toDTO(Reservation reservation, ArrayList<ReservationItemDTO> itemsDTO) {
+    private ReservationDTO toDTO(Reservation reservation, List<ReservationItemDTO> itemsDTO) {
         return new ReservationDTO(
                 reservation.getId(),
                 reservation.getCartId(),
@@ -197,7 +188,15 @@ public class ReservationService {
         stockService.updateStockQuantityByOperation(itemDTO.productId(), itemDTO.quantity(), StockOperation.REMOVE);
     }
 
-    private boolean isProductInStock(ReservationItemEvent itemDTO) {
-        return stockService.isProductInStock(itemDTO.productId(), itemDTO.quantity());
+    private List<ReservationItemEvent> sortedItems(OrderEventDTO event) {
+        return event.items().stream()
+                .sorted(Comparator.comparing(ReservationItemEvent::productId))
+                .toList();
+    }
+
+    private List<ReservationItemDTO> toItemDTOs(Reservation reservation) {
+        return reservation.getItems().stream()
+                .map(item -> new ReservationItemDTO(item.getProduct().getId(), item.getQuantity()))
+                .toList();
     }
 }

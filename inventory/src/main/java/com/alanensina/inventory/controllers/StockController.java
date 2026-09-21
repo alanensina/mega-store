@@ -34,9 +34,9 @@ public class StockController {
         return ResponseEntity.ok(stockService.getStockById(id));
     }
 
-    @PutMapping("/{id}")
-    public ResponseEntity<StockDTO> updateStock(@PathVariable UUID id, @Valid @RequestBody UpdateStockDTO stockDTO) {
-        return ResponseEntity.ok(stockService.updateStock(id, stockDTO));
+    @PutMapping()
+    public ResponseEntity<StockDTO> updateStock(@Valid @RequestBody UpdateStockDTO stockDTO) {
+        return ResponseEntity.ok(stockService.updateStock(stockDTO));
     }
 
     @DeleteMapping("/{id}")

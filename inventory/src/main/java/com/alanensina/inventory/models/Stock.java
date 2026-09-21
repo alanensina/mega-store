@@ -25,6 +25,8 @@ public class Stock {
     @JoinColumn(name = "product_id")
     private Product product;
     private int quantity;
+    @Version
+    private long version;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 

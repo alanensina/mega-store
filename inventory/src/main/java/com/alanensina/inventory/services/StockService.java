@@ -4,12 +4,10 @@ import com.alanensina.inventory.dtos.CreateStockDTO;
 import com.alanensina.inventory.dtos.StockDTO;
 import com.alanensina.inventory.dtos.UpdateStockDTO;
 import com.alanensina.inventory.enums.StockOperation;
-import com.alanensina.inventory.exceptions.InsufficientStockForReservationException;
-import com.alanensina.inventory.exceptions.InvalidStockOperationException;
-import com.alanensina.inventory.exceptions.ProductNotFoundInStockException;
-import com.alanensina.inventory.exceptions.StockNotFoundException;
+import com.alanensina.inventory.exceptions.*;
 import com.alanensina.inventory.models.Stock;
 import com.alanensina.inventory.repositories.StockRepository;
+import jakarta.transaction.Transactional;
 import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -57,8 +55,9 @@ public class StockService {
         return toDTO(stock);
     }
 
-    public StockDTO updateStock(UUID id, @Valid UpdateStockDTO stockDTO) {
-        var stock = stockRepository.findById(id).orElseThrow(() -> new StockNotFoundException(id));
+    @Transactional
+    public StockDTO updateStock(@Valid UpdateStockDTO stockDTO) {
+        var stock = stockRepository.findById(stockDTO.id()).orElseThrow(() -> new StockNotFoundException(stockDTO.id()));
         var product = productService.getProductById(stockDTO.productId());
 
         stock.setProduct(product);
@@ -77,32 +76,30 @@ public class StockService {
         return toDTO(stock);
     }
 
+    @Transactional
     public void updateStockQuantityByOperation(UUID productId, int quantity, StockOperation operation) {
-        var stock = stockRepository.findByProduct_Id(productId).orElseThrow(() -> new ProductNotFoundInStockException(productId));
-
-        if(StockOperation.ADD.equals(operation)) {
-            stock.setQuantity(stock.getQuantity() + quantity);
+        if (quantity <= 0) {
+            throw new InvalidQuantityException();
         }
 
-        else if(StockOperation.REMOVE.equals(operation)) {
-            var newQuantity = stock.getQuantity() - quantity;
-
-            if(newQuantity < 0) {
-                throw new InsufficientStockForReservationException(productId);
-            }
-
-            stock.setQuantity(newQuantity);
-
+        int quantityDelta;
+        if (StockOperation.ADD.equals(operation)) {
+            quantityDelta = quantity;
+        } else if (StockOperation.REMOVE.equals(operation)) {
+            quantityDelta = -quantity;
         } else {
             throw new InvalidStockOperationException(operation);
         }
 
-        stock.setUpdatedAt(LocalDateTime.now(ZoneId.systemDefault()));
-        stockRepository.save(stock);
-    }
+        if (stockRepository.updateQuantityIfAvailable(productId, quantityDelta) == 1) {
+            return;
+        }
 
-    public boolean isProductInStock(UUID productId, int quantity) {
-        return stockRepository.existsByProduct_IdAndQuantityGreaterThanEqual(productId, quantity);
+        if (stockRepository.findByProductId(productId).isEmpty()) {
+            throw new ProductNotFoundInStockException(productId);
+        }
+
+        throw new InsufficientStockForReservationException(productId);
     }
 
     private StockDTO toDTO(Stock savedStock) {
