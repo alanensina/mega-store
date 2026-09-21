@@ -56,13 +56,18 @@ Requirements
 
 Local setup (quick)
 -------------------
-1. Start infrastructure with Docker Compose (optional):
+1. Create a local `.env` from `.env.example`, replace every placeholder with
+   private values, and load it into the current shell:
+   cp .env.example .env
+   set -a; source .env; set +a
+
+2. Start infrastructure with Docker Compose (optional):
    docker compose up -d
    This will start Kafka and support services configured in docker-compose.yml.
 
-2. Ensure PostgreSQL instances/databases are available on the ports configured in each service's application.properties (inventory:5433, customer:5434, order:5435).
+3. Ensure PostgreSQL instances/databases are available on the ports configured in each service's application.properties (inventory:5433, customer:5434, order:5435).
 
-3. Build and run services (examples):
+4. Build and run services (examples):
    - Build all modules (from repo root):
      mvn -T 1C -pl customer,inventory,order,notification -am clean package
 
@@ -75,7 +80,7 @@ Local setup (quick)
    - Or run the packaged jars:
      java -jar inventory/target/inventory-0.0.1-SNAPSHOT.jar
 
-4. Initialize Kafka topics (if needed):
+5. Initialize Kafka topics (if needed):
    The order service contains a helper script (resources/create_topics.sh). Use it with a Kafka CLI or the containerized Kafka that comes from docker-compose.
 
 Configuration
