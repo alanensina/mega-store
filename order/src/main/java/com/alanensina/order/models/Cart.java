@@ -24,6 +24,9 @@ public class Cart {
     @GeneratedValue
     private UUID id;
 
+    @Version
+    private long version;
+
     private UUID customerId;
     private BigDecimal totalPrice;
     @Enumerated(EnumType.STRING)

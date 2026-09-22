@@ -7,17 +7,16 @@ import com.alanensina.order.enums.ReservationStatus;
 import com.alanensina.order.exceptions.CartNotFoundException;
 import com.alanensina.order.models.Cart;
 import com.alanensina.order.models.Item;
-import com.alanensina.order.producers.OrderProducer;
 import com.alanensina.order.repositories.CartRepository;
-import jakarta.transaction.Transactional;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
-import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import com.alanensina.order.exceptions.CustomerDetailsFetchException;
 import org.jspecify.annotations.NonNull;
 import org.springframework.stereotype.Service;
 import org.springframework.http.HttpHeaders;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 import org.springframework.web.client.RestClient;
@@ -31,49 +30,60 @@ import java.util.List;
 import java.util.UUID;
 
 @Service
-@AllArgsConstructor
 @Slf4j
 public class CartService {
 
     private final CartRepository cartRepository;
-    private final OrderProducer orderProducer;
+    private final OutboxService outboxService;
+    private final TransactionTemplate transactionTemplate;
     private static final String CUSTOMER_API_URL = "http://localhost:8081";
 
-    @Transactional
+    public CartService(
+            CartRepository cartRepository,
+            OutboxService outboxService,
+            PlatformTransactionManager transactionManager) {
+        this.cartRepository = cartRepository;
+        this.outboxService = outboxService;
+        this.transactionTemplate = new TransactionTemplate(transactionManager);
+    }
+
     public CartDTO create(@Valid CreateCartDTO cartDTO) {
-        List<Item> items = new ArrayList<>();
-        var totalPrice = BigDecimal.ZERO;
-        var now = LocalDateTime.now(ZoneId.systemDefault());
         var customer = getCustomerDetails(cartDTO.customerId());
 
-        var cart = Cart.builder()
-                .customerId(cartDTO.customerId())
-                .items(items)
-                .createdAt(now)
-                .updatedAt(now)
-                .status(ReservationStatus.AWAITING_PAYMENT)
-                .build();
+        return transactionTemplate.execute(status -> {
+            List<Item> items = new ArrayList<>();
+            var totalPrice = BigDecimal.ZERO;
+            var now = LocalDateTime.now(ZoneId.systemDefault());
 
-        for (ItemDTO itemDTO : cartDTO.items()) {
-
-            var item = Item.builder()
-                    .productId(itemDTO.productId())
-                    .quantity(itemDTO.quantity())
-                    .price(itemDTO.price())
-                    .cart(cart)
+            var cart = Cart.builder()
+                    .customerId(cartDTO.customerId())
+                    .items(items)
+                    .createdAt(now)
+                    .updatedAt(now)
+                    .status(ReservationStatus.AWAITING_PAYMENT)
                     .build();
-            items.add(item);
-            totalPrice = calculateTotalPricePerItem(itemDTO, totalPrice);
-        }
 
-        cart.setTotalPrice(totalPrice);
-        cart = cartRepository.save(cart);
-        log.info("Cart created with ID: {}", cart.getId());
+            for (ItemDTO itemDTO : cartDTO.items()) {
+                var item = Item.builder()
+                        .productId(itemDTO.productId())
+                        .quantity(itemDTO.quantity())
+                        .price(itemDTO.price())
+                        .cart(cart)
+                        .build();
+                items.add(item);
+                totalPrice = calculateTotalPricePerItem(itemDTO, totalPrice);
+            }
 
-        orderProducer.sendOrderMessage(createOrderEventDTO(cart, OrderEventType.CREATE));
-        orderProducer.sendNotificationMessage(createOrderNotificationEventDTO(cart, cart.getId(), customer, NotificationType.NEW_ORDER));
+            cart.setTotalPrice(totalPrice);
+            cart = cartRepository.save(cart);
+            log.info("Cart created with ID: {}", cart.getId());
 
-        return toDTO(cart);
+            outboxService.addOrderEvent(createOrderEventDTO(cart, OrderEventType.CREATE));
+            outboxService.addNotificationEvent(
+                    createOrderNotificationEventDTO(cart, cart.getId(), customer, NotificationType.NEW_ORDER));
+
+            return toDTO(cart);
+        });
     }
 
     public List<CartDTO> list() {
@@ -89,58 +99,65 @@ public class CartService {
         return toDTO(order);
     }
 
-    @Transactional
     public CartDTO update(@Valid UpdateCartDTO cartDTO) {
-        var existingCart = getOrderDTOById(cartDTO.id());
+        return transactionTemplate.execute(status -> {
+            var cart = cartRepository.findById(cartDTO.id())
+                    .orElseThrow(() -> new CartNotFoundException(cartDTO.id()));
 
-        List<Item> newItems = new ArrayList<>();
-        var newTotalPrice = BigDecimal.ZERO;
+            cart.getItems().clear();
+            List<Item> items = cart.getItems();
+            var newTotalPrice = BigDecimal.ZERO;
 
-        var updatedCart = Cart.builder()
-                .id(cartDTO.id())
-                .customerId(cartDTO.customerId())
-                .createdAt(existingCart.createdAt())
-                .updatedAt(LocalDateTime.now(ZoneId.systemDefault()))
-                .updatedAt(LocalDateTime.now(ZoneId.systemDefault()))
-                .status(cartDTO.status())
-                .items(newItems)
-                .build();
+            cart.setCustomerId(cartDTO.customerId());
+            cart.setStatus(cartDTO.status());
+            cart.setUpdatedAt(LocalDateTime.now(ZoneId.systemDefault()));
 
-        for (ItemDTO itemDTO : cartDTO.items()) {
+            for (ItemDTO itemDTO : cartDTO.items()) {
+                var item = Item.builder()
+                        .productId(itemDTO.productId())
+                        .quantity(itemDTO.quantity())
+                        .price(itemDTO.price())
+                        .cart(cart)
+                        .build();
+                items.add(item);
+                newTotalPrice = calculateTotalPricePerItem(itemDTO, newTotalPrice);
+            }
 
-            var item = Item.builder()
-                    .productId(itemDTO.productId())
-                    .quantity(itemDTO.quantity())
-                    .price(itemDTO.price())
-                    .cart(updatedCart)
-                    .build();
-            newItems.add(item);
-            newTotalPrice = calculateTotalPricePerItem(itemDTO, newTotalPrice);
-        }
+            cart.setTotalPrice(newTotalPrice);
 
-        updatedCart.setTotalPrice(newTotalPrice);
+            cartRepository.save(cart);
+            log.info("Cart updated with ID: {}", cart.getId());
 
-        cartRepository.save(updatedCart);
-        log.info("Cart updated with ID: {}", updatedCart.getId());
+            outboxService.addOrderEvent(createOrderEventDTO(cart, OrderEventType.UPDATE));
 
-        orderProducer.sendOrderMessage(createOrderEventDTO(updatedCart, OrderEventType.UPDATE));
-
-        return toDTO(updatedCart);
+            return toDTO(cart);
+        });
     }
 
-    @Transactional
     public CartDTO cancel(UUID id) {
-        var cart = cartRepository.findById(id)
+        var customerId = cartRepository.findById(id)
+                .map(Cart::getCustomerId)
                 .orElseThrow(() -> new CartNotFoundException(id));
-        cart.setStatus(ReservationStatus.CANCELLED);
-        var customer = getCustomerDetails(cart.getCustomerId());
+        var customer = getCustomerDetails(customerId);
 
-        cartRepository.save(cart);
-        orderProducer.sendOrderMessage(createOrderEventDTO(cart, OrderEventType.CANCEL));
-        orderProducer.sendNotificationMessage(createOrderNotificationEventDTO(cart, id, customer, NotificationType.CANCEL));
+        return transactionTemplate.execute(status -> {
+            var cart = cartRepository.findById(id)
+                    .orElseThrow(() -> new CartNotFoundException(id));
 
-        log.info("Cart cancelled with ID: {}", id);
-        return toDTO(cart);
+            if (ReservationStatus.CANCELLED.equals(cart.getStatus())) {
+                return toDTO(cart);
+            }
+
+            cart.setStatus(ReservationStatus.CANCELLED);
+            cart.setUpdatedAt(LocalDateTime.now(ZoneId.systemDefault()));
+            cartRepository.save(cart);
+            outboxService.addOrderEvent(createOrderEventDTO(cart, OrderEventType.CANCEL));
+            outboxService.addNotificationEvent(
+                    createOrderNotificationEventDTO(cart, id, customer, NotificationType.CANCEL));
+
+            log.info("Cart cancelled with ID: {}", id);
+            return toDTO(cart);
+        });
     }
 
     private static @NonNull BigDecimal calculateTotalPricePerItem(ItemDTO itemDTO, BigDecimal totalPrice) {

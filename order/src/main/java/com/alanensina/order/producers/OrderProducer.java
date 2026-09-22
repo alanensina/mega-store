@@ -47,7 +47,10 @@ public class OrderProducer {
 
         try {
             String payload = objectMapper.writeValueAsString(event);
-            kafkaTemplate.send(topic.name(), payload);
+            String key = event instanceof OrderEventDTO orderEvent
+                    ? orderEvent.cartId().toString()
+                    : ((NotificationDTO) event).orderId().toString();
+            kafkaTemplate.send(topic.name(), key, payload);
         } catch (Exception e) {
             log.error("Error to send a {} event to topic {} -> {}", eventType.name(), topic.name(), event, e);
             throw new KafkaOrderProducerException(e.getMessage());

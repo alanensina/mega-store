@@ -72,25 +72,26 @@ public class CustomerService {
         var oldCustomer = customerRepository.findById(customerDTO.id())
                 .orElseThrow(() -> new CustomerNotFoundException(customerDTO.id()));
 
-        validateUsernameAndEmail(customerDTO.username(), customerDTO.email());
+        if (customerRepository.existsByUsernameOrEmailForAnotherCustomer(
+                customerDTO.username(), customerDTO.email(), customerDTO.id())) {
+            throw new CustomerUsernameOrEmailAlreadyExistsException(
+                    customerDTO.username(), customerDTO.email());
+        }
 
         var now = LocalDateTime.now(ZoneId.systemDefault());
         var encryptedPassword = passwordEncryptionService.encryptPassword(customerDTO.password());
 
-        var updatedCustomer = Customer.builder()
-                .id(oldCustomer.getId())
-                .name(customerDTO.name())
-                .email(customerDTO.email())
-                .username(customerDTO.username())
-                .password(encryptedPassword)
-                .updatedAt(now)
-                .build();
+        oldCustomer.setName(customerDTO.name());
+        oldCustomer.setEmail(customerDTO.email());
+        oldCustomer.setUsername(customerDTO.username());
+        oldCustomer.setPassword(encryptedPassword);
+        oldCustomer.setUpdatedAt(now);
 
-        updatedCustomer = customerRepository.save(updatedCustomer);
+        customerRepository.save(oldCustomer);
 
-        log.info("Customer updated with ID: {}", updatedCustomer.getId());
+        log.info("Customer updated with ID: {}", oldCustomer.getId());
 
-        return toDTO(updatedCustomer);
+        return toDTO(oldCustomer);
     }
 
     public CustomerDTO toDTO(Customer savedCustomer) {

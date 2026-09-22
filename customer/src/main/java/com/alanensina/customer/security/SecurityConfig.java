@@ -49,6 +49,7 @@ public class SecurityConfig {
                             // Only ignore CSRF for the specific stateless endpoints that use JWT or are used by public clients:
                             // - authentication endpoints used to obtain tokens (they accept credentials and return a token)
                             // - customer creation (signup) which is intentionally public
+                            // - customer update and deletion, which use Authorization headers for auth (JWT)
                             // These endpoints are either public (signup) or use Authorization headers for auth (JWT),
                             // so CSRF risks are minimal when limited to these paths.
                             csrf.csrfTokenRepository(csrfRepo)
@@ -58,8 +59,11 @@ public class SecurityConfig {
                                         if (path == null) return false;
                                         // Match both /api/auth and any subpaths like /api/auth/
                                         if ("/api/auth".equals(path) || path.startsWith("/api/auth/")) return true;
-                                        return ("/api/customer".equals(path) && "POST".equalsIgnoreCase(method));
-                                    }); // NOSONAR: intentionally ignoring CSRF only for token issuance and signup endpoints
+                                        return "/api/customer".equals(path)
+                                                && ("POST".equalsIgnoreCase(method)
+                                                || "PUT".equalsIgnoreCase(method)
+                                                || "DELETE".equalsIgnoreCase(method));
+                                    }); // NOSONAR: intentionally ignoring CSRF only for stateless API endpoints
 
                         })
                     .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))

@@ -2,18 +2,18 @@ package com.alanensina.notification.services;
 
 import com.alanensina.notification.dtos.NotificationDTO;
 import com.alanensina.notification.exceptions.EmailErrorException;
-import lombok.AllArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.NonNull;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Service;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Service
-@Slf4j
 public class EmailService {
 
+    private static final Logger log = LoggerFactory.getLogger(EmailService.class);
     private final JavaMailSender sender;
 
     @Value(value = "${spring.mail.username}")

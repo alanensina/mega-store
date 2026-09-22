@@ -4,6 +4,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.persistence.Version;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -23,6 +24,9 @@ public class Customer {
     @Id
     @GeneratedValue
     private UUID id;
+
+    @Version
+    private long version;
 
     private String name;
     private String email;

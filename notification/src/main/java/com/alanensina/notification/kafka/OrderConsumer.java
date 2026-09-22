@@ -3,20 +3,24 @@ package com.alanensina.notification.kafka;
 import com.alanensina.notification.dtos.NotificationDTO;
 import com.alanensina.notification.exceptions.InvalidKafkaNotificationEventTypeException;
 import com.alanensina.notification.exceptions.KafkaErrorException;
-import com.alanensina.notification.services.EmailService;
-import lombok.AllArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import com.alanensina.notification.services.NotificationDeliveryService;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Service;
 import tools.jackson.databind.ObjectMapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Service
-@AllArgsConstructor
-@Slf4j
 public class OrderConsumer {
 
+    private static final Logger log = LoggerFactory.getLogger(OrderConsumer.class);
     private final ObjectMapper objectMapper;
-    private final EmailService emailService;
+    private final NotificationDeliveryService deliveryService;
+
+    public OrderConsumer(ObjectMapper objectMapper, NotificationDeliveryService deliveryService) {
+        this.objectMapper = objectMapper;
+        this.deliveryService = deliveryService;
+    }
 
     @KafkaListener(
             topics = "${spring.kafka.topic.name}",
@@ -26,23 +30,21 @@ public class OrderConsumer {
         try {
             var event = objectMapper.readValue(message, NotificationDTO.class);
 
-            switch(event.notificationType()){
-
-                case NEW_ORDER:
-                    emailService.sendWelcomeEmail(event);
-                    break;
-
-                case CANCEL:
-                    emailService.sendCancellationEmail(event);
-                    break;
-
-                default:
-                    log.error("Unhandled notification event type: {}", event.notificationType().name());
-                    throw new InvalidKafkaNotificationEventTypeException(event.notificationType().name());
+            if (event.notificationType() == null) {
+                throw new InvalidKafkaNotificationEventTypeException("null");
             }
+            deliveryService.deliver(event);
         } catch (Exception e) {
-            log.error("Error processing Kafka message: {}", message, e);
+            log.error("Error processing notification for order {}", safeOrderId(message), e);
             throw new KafkaErrorException(e.getMessage());
+        }
+    }
+
+    private String safeOrderId(String message) {
+        try {
+            return objectMapper.readTree(message).path("orderId").asText("unknown");
+        } catch (Exception ignored) {
+            return "unknown";
         }
     }
 }

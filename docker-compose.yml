@@ -38,6 +38,19 @@ services:
     networks:
       - order-service-postgres-network
 
+  notification-service-postgres:
+    image: postgres:14.2
+    container_name: notification-service-db-postgres
+    restart: always
+    environment:
+      POSTGRES_PASSWORD: ${NOTIFICATION_DB_PASSWORD:?Set NOTIFICATION_DB_PASSWORD in .env}
+      POSTGRES_USER: ${NOTIFICATION_DB_USERNAME:?Set NOTIFICATION_DB_USERNAME in .env}
+      POSTGRES_DB: notification-service
+    ports:
+      - "5436:5432"
+    networks:
+      - notification-service-postgres-network
+
   kafka:
     image: apache/kafka:4.3.1
     container_name: kafka
@@ -66,4 +79,5 @@ networks:
   inventory-service-postgres-network:
   customer-service-postgres-network:
   order-service-postgres-network:
+  notification-service-postgres-network:
   kafka-network:
