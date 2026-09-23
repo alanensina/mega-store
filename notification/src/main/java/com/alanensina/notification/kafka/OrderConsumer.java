@@ -34,7 +34,7 @@ public class OrderConsumer {
                 throw new InvalidKafkaNotificationEventTypeException("null");
             }
             deliveryService.deliver(event);
-        } catch (Exception e) {
+        } catch (RuntimeException e) {
             log.error("Error processing notification for order {}", safeOrderId(message), e);
             throw new KafkaErrorException(e.getMessage());
         }
@@ -43,7 +43,8 @@ public class OrderConsumer {
     private String safeOrderId(String message) {
         try {
             return objectMapper.readTree(message).path("orderId").asText("unknown");
-        } catch (Exception ignored) {
+        } catch (RuntimeException e) {
+            log.error("Error processing notification for order {}", safeOrderId(message), e);
             return "unknown";
         }
     }

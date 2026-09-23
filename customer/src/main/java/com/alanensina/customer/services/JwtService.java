@@ -11,7 +11,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
-import java.util.Date;
 
 @Service
 @Slf4j
@@ -36,9 +35,8 @@ public class JwtService {
                 .withSubject(customer.getId().toString())
                 .withClaim("username", customer.getUsername())
                 .withClaim("email", customer.getEmail())
-                // JWT library requires java.util.Date; conversions from java.time.Instant are intentional
-                .withIssuedAt(Date.from(now))
-                .withExpiresAt(Date.from(exp))
+                .withIssuedAt(now)
+                .withExpiresAt(exp)
                 .sign(algorithm);
     }
 

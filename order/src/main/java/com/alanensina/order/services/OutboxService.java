@@ -12,7 +12,7 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
-import java.util.UUID;
+import java.time.ZoneId;
 
 @Service
 @RequiredArgsConstructor
@@ -40,7 +40,7 @@ public class OutboxService {
         outboxEvent.setTopic(topic);
         outboxEvent.setEventKey(key);
         outboxEvent.setPayload(toJson(event));
-        outboxEvent.setCreatedAt(LocalDateTime.now());
+        outboxEvent.setCreatedAt(LocalDateTime.now(ZoneId.systemDefault()));
         outboxEvent.setAttempts(0);
         repository.save(outboxEvent);
     }

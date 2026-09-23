@@ -1,10 +1,15 @@
 package com.alanensina.notification.models;
 
+import com.alanensina.notification.enums.NotificationType;
 import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
 
+@NoArgsConstructor
+@AllArgsConstructor
 @Entity
 @Table(name = "NOTIFICATION_DELIVERY",
         uniqueConstraints = @UniqueConstraint(
@@ -21,23 +26,21 @@ public class NotificationDelivery {
 
     @Enumerated(EnumType.STRING)
     @Column(name = "notification_type", nullable = false)
-    private com.alanensina.notification.enums.NotificationType notificationType;
+    private NotificationType notificationType;
 
     @Column(name = "delivered_at", nullable = false)
     private LocalDateTime deliveredAt;
-
-    public NotificationDelivery() {
-    }
 
     public void setOrderId(UUID orderId) {
         this.orderId = orderId;
     }
 
-    public void setNotificationType(com.alanensina.notification.enums.NotificationType notificationType) {
+    public void setNotificationType(NotificationType notificationType) {
         this.notificationType = notificationType;
     }
 
     public void setDeliveredAt(LocalDateTime deliveredAt) {
         this.deliveredAt = deliveredAt;
     }
+
 }

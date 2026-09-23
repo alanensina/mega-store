@@ -47,7 +47,7 @@ public class EmailService {
             message.setText(text);
             sender.send(message);
         } catch (Exception e) {
-            log.error("Error sending email: " + e.getMessage());
+            log.error("Error sending email: {}", e.getMessage());
             throw new EmailErrorException(e.getMessage());
         }
     }
