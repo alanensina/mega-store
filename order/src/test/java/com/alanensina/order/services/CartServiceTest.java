@@ -1,0 +1,266 @@
+package com.alanensina.order.services;
+
+import com.alanensina.order.dtos.CartDTO;
+import com.alanensina.order.dtos.CreateCartDTO;
+import com.alanensina.order.dtos.CustomerDTO;
+import com.alanensina.order.dtos.ItemDTO;
+import com.alanensina.order.dtos.NotificationDTO;
+import com.alanensina.order.dtos.OrderEventDTO;
+import com.alanensina.order.dtos.UpdateCartDTO;
+import com.alanensina.order.enums.NotificationType;
+import com.alanensina.order.enums.OrderEventType;
+import com.alanensina.order.enums.ReservationStatus;
+import com.alanensina.order.exceptions.CartNotFoundException;
+import com.alanensina.order.exceptions.CustomerDetailsFetchException;
+import com.alanensina.order.models.Cart;
+import com.alanensina.order.models.Item;
+import com.alanensina.order.repositories.CartRepository;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
+import org.mockito.MockedStatic;
+import org.springframework.http.HttpHeaders;
+import org.springframework.mock.web.MockHttpServletRequest;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.web.client.RestClient;
+import org.springframework.web.client.RestClientException;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
+
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
+import java.util.function.Consumer;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
+class CartServiceTest {
+
+    private final CartRepository cartRepository = mock(CartRepository.class);
+    private final OutboxService outboxService = mock(OutboxService.class);
+    private final PlatformTransactionManager transactionManager = mock(PlatformTransactionManager.class);
+    private final CartService cartService = new CartService(cartRepository, outboxService, transactionManager);
+
+    private UUID cartId;
+    private UUID customerId;
+    private UUID productId;
+    private CustomerDTO customer;
+    private ItemDTO itemDTO;
+
+    @BeforeEach
+    void setUp() {
+        cartId = UUID.randomUUID();
+        customerId = UUID.randomUUID();
+        productId = UUID.randomUUID();
+        customer = new CustomerDTO(customerId, "Alice", "alice@example.com", "alice", null, null);
+        itemDTO = new ItemDTO(productId, 2, new BigDecimal("12.50"));
+    }
+
+    @AfterEach
+    void clearRequestContext() {
+        RequestContextHolder.resetRequestAttributes();
+    }
+
+    @Test
+    void createCalculatesTotalAndEmitsOrderAndNotificationEvents() {
+        when(cartRepository.save(any(Cart.class))).thenAnswer(invocation -> {
+            Cart savedCart = invocation.getArgument(0);
+            savedCart.setId(cartId);
+            return savedCart;
+        });
+
+        try (MockedStatic<RestClient> ignored = mockCustomerLookup(customer, "Bearer token")) {
+            CartDTO result = cartService.create(new CreateCartDTO(customerId, List.of(itemDTO)));
+
+            assertEquals(cartId, result.id());
+            assertEquals(new BigDecimal("25.00"), result.totalPrice());
+            assertEquals(ReservationStatus.AWAITING_PAYMENT, result.status());
+            assertEquals(List.of(itemDTO), result.items());
+        }
+
+        ArgumentCaptor<Cart> cartCaptor = ArgumentCaptor.forClass(Cart.class);
+        verify(cartRepository).save(cartCaptor.capture());
+        assertEquals(cartId, cartCaptor.getValue().getItems().getFirst().getCart().getId());
+        verify(outboxService).addOrderEvent(any(OrderEventDTO.class));
+        verify(outboxService).addNotificationEvent(any(NotificationDTO.class));
+    }
+
+    @Test
+    void createWrapsCustomerLookupFailures() {
+        try (MockedStatic<RestClient> restClientMock = mockStaticRestClientThrowing(
+                new RestClientException("customer service unavailable"))) {
+            CustomerDetailsFetchException exception = assertThrows(
+                    CustomerDetailsFetchException.class,
+                    () -> cartService.create(new CreateCartDTO(customerId, List.of(itemDTO))));
+            assertNotNull(exception.getCause());
+        }
+    }
+
+    @Test
+    void listMapsRepositoryResultsToDtos() {
+        when(cartRepository.findAll()).thenReturn(List.of(cartWithItem()));
+
+        List<CartDTO> results = cartService.list();
+
+        assertEquals(1, results.size());
+        assertEquals(cartId, results.getFirst().id());
+        assertEquals(List.of(itemDTO), results.getFirst().items());
+    }
+
+    @Test
+    void getOrderDTOByIdReturnsCartAndThrowsWhenMissing() {
+        when(cartRepository.findById(cartId)).thenReturn(Optional.of(cartWithItem()), Optional.empty());
+
+        assertEquals(cartId, cartService.getOrderDTOById(cartId).id());
+        assertThrows(CartNotFoundException.class, () -> cartService.getOrderDTOById(cartId));
+    }
+
+    @Test
+    void updateReplacesItemsAndCalculatesNewTotal() {
+        Cart cart = cartWithItem();
+        when(cartRepository.findById(cartId)).thenReturn(Optional.of(cart));
+        when(cartRepository.save(cart)).thenReturn(cart);
+        ItemDTO replacement = new ItemDTO(UUID.randomUUID(), 3, new BigDecimal("4.00"));
+
+        CartDTO result = cartService.update(new UpdateCartDTO(
+                cartId, customerId, ReservationStatus.PAID, List.of(replacement)));
+
+        assertEquals(customerId, result.customerId());
+        assertEquals(ReservationStatus.PAID, result.status());
+        assertEquals(new BigDecimal("12.00"), result.totalPrice());
+        assertEquals(List.of(replacement), result.items());
+        assertNotNull(result.updatedAt());
+        verify(outboxService).addOrderEvent(any(OrderEventDTO.class));
+    }
+
+    @Test
+    void updateThrowsWhenCartDoesNotExist() {
+        when(cartRepository.findById(cartId)).thenReturn(Optional.empty());
+
+        assertThrows(CartNotFoundException.class, () -> cartService.update(
+                new UpdateCartDTO(cartId, customerId, ReservationStatus.PAID, List.of(itemDTO))));
+        verify(cartRepository, never()).save(any(Cart.class));
+    }
+
+    @Test
+    void cancelMarksCartAndEmitsCancellationEvents() {
+        Cart cart = cartWithItem();
+        when(cartRepository.findById(cartId)).thenReturn(Optional.of(cart), Optional.of(cart));
+        when(cartRepository.save(cart)).thenReturn(cart);
+
+        try (MockedStatic<RestClient> ignored = mockCustomerLookup(customer, null)) {
+            CartDTO result = cartService.cancel(cartId);
+
+            assertEquals(ReservationStatus.CANCELLED, result.status());
+            assertNotNull(result.updatedAt());
+        }
+
+        verify(cartRepository).save(cart);
+        verify(outboxService).addOrderEvent(any(OrderEventDTO.class));
+        verify(outboxService).addNotificationEvent(any(NotificationDTO.class));
+    }
+
+    @Test
+    void cancelReturnsAlreadyCancelledCartWithoutPublishing() {
+        Cart cart = cartWithItem();
+        cart.setStatus(ReservationStatus.CANCELLED);
+        when(cartRepository.findById(cartId)).thenReturn(Optional.of(cart), Optional.of(cart));
+
+        try (MockedStatic<RestClient> ignored = mockCustomerLookup(customer, null)) {
+            CartDTO result = cartService.cancel(cartId);
+
+            assertEquals(ReservationStatus.CANCELLED, result.status());
+        }
+
+        verify(cartRepository, never()).save(any(Cart.class));
+        verify(outboxService, never()).addOrderEvent(any(OrderEventDTO.class));
+        verify(outboxService, never()).addNotificationEvent(any(NotificationDTO.class));
+    }
+
+    @Test
+    void cancelThrowsWhenCartIsMissingBeforeCustomerLookup() {
+        when(cartRepository.findById(cartId)).thenReturn(Optional.empty());
+
+        assertThrows(CartNotFoundException.class, () -> cartService.cancel(cartId));
+    }
+
+    @Test
+    void cancelThrowsWhenCartDisappearsDuringTransaction() {
+        when(cartRepository.findById(cartId)).thenReturn(Optional.of(cartWithItem()), Optional.empty());
+
+        try (MockedStatic<RestClient> ignored = mockCustomerLookup(customer, null)) {
+            assertThrows(CartNotFoundException.class, () -> cartService.cancel(cartId));
+        }
+    }
+
+    private Cart cartWithItem() {
+        Cart cart = Cart.builder()
+                .id(cartId)
+                .customerId(customerId)
+                .totalPrice(new BigDecimal("25.00"))
+                .status(ReservationStatus.AWAITING_PAYMENT)
+                .createdAt(LocalDateTime.now())
+                .updatedAt(LocalDateTime.now())
+                .items(new ArrayList<>())
+                .build();
+        cart.getItems().add(Item.builder()
+                .cart(cart)
+                .productId(productId)
+                .quantity(itemDTO.quantity())
+                .price(itemDTO.price())
+                .build());
+        return cart;
+    }
+
+    @SuppressWarnings("unchecked")
+    private MockedStatic<RestClient> mockCustomerLookup(CustomerDTO response, String authorization) {
+        RestClient restClient = mock(RestClient.class);
+        RestClient.RequestHeadersUriSpec<?> uriSpec = mock(RestClient.RequestHeadersUriSpec.class);
+        RestClient.RequestHeadersSpec<?> headersSpec = mock(RestClient.RequestHeadersSpec.class);
+        RestClient.ResponseSpec responseSpec = mock(RestClient.ResponseSpec.class);
+
+        doReturn(uriSpec).when(restClient).get();
+        doReturn(headersSpec).when(uriSpec).uri(anyString(), eq(customerId));
+        doAnswer(invocation -> {
+            Consumer<HttpHeaders> headersConsumer = invocation.getArgument(0);
+            headersConsumer.accept(new HttpHeaders());
+            return headersSpec;
+        }).when(headersSpec).headers(any());
+        doReturn(responseSpec).when(headersSpec).retrieve();
+        when(responseSpec.body(CustomerDTO.class)).thenReturn(response);
+
+        if (authorization != null) {
+            MockHttpServletRequest request = new MockHttpServletRequest();
+            request.addHeader(HttpHeaders.AUTHORIZATION, authorization);
+            RequestContextHolder.setRequestAttributes(new ServletRequestAttributes(request));
+        } else {
+            RequestContextHolder.resetRequestAttributes();
+        }
+
+        MockedStatic<RestClient> restClientMock = mockStatic(RestClient.class);
+        restClientMock.when(() -> RestClient.create("http://localhost:8081")).thenReturn(restClient);
+        return restClientMock;
+    }
+
+    private MockedStatic<RestClient> mockStaticRestClientThrowing(RestClientException exception) {
+        MockedStatic<RestClient> restClientMock = mockStatic(RestClient.class);
+        restClientMock.when(() -> RestClient.create("http://localhost:8081")).thenThrow(exception);
+        return restClientMock;
+    }
+}
