@@ -38,6 +38,14 @@ class JwtServiceTest {
     }
 
     @Test
+    void extractUsernameShouldReturnNullWhenCustomerUsernameIsNull() {
+        Customer customer = customer();
+        customer.setUsername(null);
+
+        assertNull(jwtService.extractUsername(jwtService.generateToken(customer)));
+    }
+
+    @Test
     void extractUsernameShouldRejectInvalidToken() {
         assertThrows(Exception.class, () -> jwtService.extractUsername("invalid-token"));
     }
