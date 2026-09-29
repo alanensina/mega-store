@@ -1,11 +1,15 @@
 package com.alanensina.customer.security;
 
+import com.alanensina.customer.exceptions.SecurityFilterChainFailedException;
 import com.alanensina.customer.services.CustomerService;
 import com.alanensina.customer.services.JwtService;
+import jakarta.servlet.http.HttpServletResponse;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.csrf.CsrfFilter;
 import org.springframework.mock.web.MockHttpServletRequest;
@@ -15,6 +19,7 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.test.context.junit.jupiter.SpringJUnitConfig;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.Mockito.*;
 
@@ -55,24 +60,30 @@ class SecurityConfigTest {
         when(request.getServerName()).thenReturn("localhost");
         when(request.getServerPort()).thenReturn(80);
         when(request.getMethod()).thenReturn("POST");
-        csrfFilter.doFilter(request, new MockHttpServletResponse(), (req, response) -> {
+
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        csrfFilter.doFilter(request, response, (req, resp) -> {
         });
+
+
+        assertEquals(HttpServletResponse.SC_FORBIDDEN, response.getStatus());
     }
 
     @Test
-    void shouldWrapSecurityConfigurationFailures() throws Exception {
+    void shouldWrapSecurityConfigurationFailures() {
         SecurityConfig config = new SecurityConfig(new JwtService("test-secret", 3_600_000),
-                org.mockito.Mockito.mock(CustomerService.class));
-        org.springframework.security.config.annotation.web.builders.HttpSecurity http =
-                mock(org.springframework.security.config.annotation.web.builders.HttpSecurity.class,
+                mock(CustomerService.class));
+        HttpSecurity http =
+                mock(HttpSecurity.class,
                         RETURNS_DEEP_STUBS);
         when(http.build()).thenThrow(new RuntimeException("configuration failure"));
 
-        var exception = org.junit.jupiter.api.Assertions.assertThrows(
-                com.alanensina.customer.exceptions.SecurityFilterChainFailedException.class,
+        var exception = Assertions.assertThrows(
+                SecurityFilterChainFailedException.class,
                 () -> config.securityFilterChain(http));
 
-        org.junit.jupiter.api.Assertions.assertTrue(exception.getMessage().contains("configuration failure"));
+        Assertions.assertTrue(exception.getMessage().contains("configuration failure"));
     }
 
     private void applyCsrf(Filter filter, String path, String method) throws Exception {
@@ -93,8 +104,7 @@ class SecurityConfigTest {
 
         @Bean
         CustomerService customerService() {
-            return org.mockito.Mockito.mock(CustomerService.class);
+            return mock(CustomerService.class);
         }
-
     }
 }

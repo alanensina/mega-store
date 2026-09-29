@@ -3,7 +3,7 @@ package com.alanensina.customer.services;
 import com.alanensina.customer.exceptions.PasswordHashingFailedException;
 import com.alanensina.customer.exceptions.PasswordMatchingFailedException;
 import org.junit.jupiter.api.Test;
-import org.mockito.MockedConstruction;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -23,8 +23,8 @@ class PasswordEncryptionServiceTest {
 
     @Test
     void encryptPasswordShouldWrapEncodingErrors() {
-        try (MockedConstruction<org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder> ignored =
-                     mockConstruction(org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder.class,
+        try (var _ =
+                     mockConstruction(BCryptPasswordEncoder.class,
                              (mock, context) -> when(mock.encode("Password123"))
                                      .thenThrow(new IllegalStateException("encoder error")))) {
             PasswordEncryptionService serviceWithMockedEncoder = new PasswordEncryptionService();
@@ -46,8 +46,8 @@ class PasswordEncryptionServiceTest {
 
     @Test
     void matchPasswordShouldWrapMatchingErrors() {
-        try (MockedConstruction<org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder> ignored =
-                     mockConstruction(org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder.class,
+        try (var _ =
+                     mockConstruction(BCryptPasswordEncoder.class,
                              (mock, context) -> when(mock.matches("Password123", "hash"))
                                      .thenThrow(new IllegalStateException("matching error")))) {
             PasswordEncryptionService serviceWithMockedEncoder = new PasswordEncryptionService();

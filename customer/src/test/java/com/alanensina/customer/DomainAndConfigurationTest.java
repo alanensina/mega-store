@@ -45,7 +45,6 @@ class DomainAndConfigurationTest {
         assertEquals(copy, customer);
         assertEquals(2, customer.getVersion());
         assertNotNull(customer.toString());
-        assertEquals(customer, customer);
     }
 
     @Test
@@ -72,7 +71,6 @@ class DomainAndConfigurationTest {
 
     @Test
     void shouldInvokeApplicationMain() {
-        assertNotNull(new CustomerApplication());
         try (MockedStatic<SpringApplication> spring = mockStatic(SpringApplication.class)) {
             CustomerApplication.main(new String[]{"--test"});
             spring.verify(() -> SpringApplication.run(CustomerApplication.class, "--test"));
