@@ -7,8 +7,6 @@ import com.alanensina.order.dtos.ItemDTO;
 import com.alanensina.order.dtos.NotificationDTO;
 import com.alanensina.order.dtos.OrderEventDTO;
 import com.alanensina.order.dtos.UpdateCartDTO;
-import com.alanensina.order.enums.NotificationType;
-import com.alanensina.order.enums.OrderEventType;
 import com.alanensina.order.enums.ReservationStatus;
 import com.alanensina.order.exceptions.CartNotFoundException;
 import com.alanensina.order.exceptions.CustomerDetailsFetchException;
@@ -85,7 +83,7 @@ class CartServiceTest {
             return savedCart;
         });
 
-        try (MockedStatic<RestClient> ignored = mockCustomerLookup(customer, "Bearer token")) {
+        try (var _ = mockCustomerLookup(customer, "Bearer token")) {
             CartDTO result = cartService.create(new CreateCartDTO(customerId, List.of(itemDTO)));
 
             assertEquals(cartId, result.id());
@@ -103,7 +101,7 @@ class CartServiceTest {
 
     @Test
     void createWrapsCustomerLookupFailures() {
-        try (MockedStatic<RestClient> restClientMock = mockStaticRestClientThrowing(
+        try (var _ = mockStaticRestClientThrowing(
                 new RestClientException("customer service unavailable"))) {
             CustomerDetailsFetchException exception = assertThrows(
                     CustomerDetailsFetchException.class,
@@ -164,7 +162,7 @@ class CartServiceTest {
         when(cartRepository.findById(cartId)).thenReturn(Optional.of(cart), Optional.of(cart));
         when(cartRepository.save(cart)).thenReturn(cart);
 
-        try (MockedStatic<RestClient> ignored = mockCustomerLookup(customer, null)) {
+        try (var _ = mockCustomerLookup(customer, null)) {
             CartDTO result = cartService.cancel(cartId);
 
             assertEquals(ReservationStatus.CANCELLED, result.status());
@@ -182,7 +180,7 @@ class CartServiceTest {
         cart.setStatus(ReservationStatus.CANCELLED);
         when(cartRepository.findById(cartId)).thenReturn(Optional.of(cart), Optional.of(cart));
 
-        try (MockedStatic<RestClient> ignored = mockCustomerLookup(customer, null)) {
+        try (var _ = mockCustomerLookup(customer, null)) {
             CartDTO result = cartService.cancel(cartId);
 
             assertEquals(ReservationStatus.CANCELLED, result.status());
@@ -204,7 +202,7 @@ class CartServiceTest {
     void cancelThrowsWhenCartDisappearsDuringTransaction() {
         when(cartRepository.findById(cartId)).thenReturn(Optional.of(cartWithItem()), Optional.empty());
 
-        try (MockedStatic<RestClient> ignored = mockCustomerLookup(customer, null)) {
+        try (var _ = mockCustomerLookup(customer, null)) {
             assertThrows(CartNotFoundException.class, () -> cartService.cancel(cartId));
         }
     }

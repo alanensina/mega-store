@@ -10,6 +10,7 @@ import com.alanensina.inventory.repositories.ProductRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.api.function.Executable;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
@@ -68,8 +69,9 @@ class ProductServiceTest {
     void createShouldRejectDuplicateName() {
         when(productRepository.existsByNameIgnoreCase("Keyboard")).thenReturn(true);
 
-        assertThrows(ProductNameAlreadyExistsException.class,
-                () -> productService.create(new CreateProductDTO("Keyboard", true)));
+        Executable createCall = () -> productService.create(new CreateProductDTO("Keyboard", true));
+
+        assertThrows(ProductNameAlreadyExistsException.class, createCall);
         verify(productRepository, never()).save(any());
     }
 
@@ -137,8 +139,9 @@ class ProductServiceTest {
         when(productRepository.findById(productId)).thenReturn(Optional.of(product("Old name", true)));
         when(productRepository.existsByNameIgnoreCase("New name")).thenReturn(true);
 
-        assertThrows(ProductNameAlreadyExistsException.class,
-                () -> productService.updateProduct(new UpdateProductDTO(productId, "New name", false)));
+        Executable updateCall = () -> productService.updateProduct(new UpdateProductDTO(productId, "New name", false));
+
+        assertThrows(ProductNameAlreadyExistsException.class, updateCall);
         verify(productRepository, never()).save(any());
     }
 

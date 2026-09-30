@@ -6,7 +6,6 @@ import org.springframework.boot.SpringApplication;
 
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mockStatic;
-import static org.mockito.Mockito.verify;
 
 class NotificationApplicationTest {
 

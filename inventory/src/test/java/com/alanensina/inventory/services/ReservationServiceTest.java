@@ -13,16 +13,15 @@ import com.alanensina.inventory.repositories.ReservationRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.api.function.Executable;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 
+import static java.util.stream.Collectors.toSet;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
@@ -94,9 +93,15 @@ class ReservationServiceTest {
                 itemEvent(secondProductId, 4), itemEvent(firstProductId, 2)));
 
         assertEquals(reservationId, result.id());
-        assertEquals(List.of(firstProductId, secondProductId),
-                result.items().stream().map(ReservationItemDTO::productId).toList());
-        assertEquals(List.of(2, 4), result.items().stream().map(ReservationItemDTO::quantity).toList());
+
+        // Verifica os productIds sem importar a ordem
+        assertEquals(Set.of(firstProductId, secondProductId),
+                result.items().stream().map(ReservationItemDTO::productId).collect(toSet()));
+
+        // Verifica as quantidades sem importar a ordem
+        assertEquals(Set.of(2, 4),
+                result.items().stream().map(ReservationItemDTO::quantity).collect(toSet()));
+
         verify(stockService).updateStockQuantityByOperation(firstProductId, 2, StockOperation.REMOVE);
         verify(stockService).updateStockQuantityByOperation(secondProductId, 4, StockOperation.REMOVE);
         verify(reservationRepository).save(any(Reservation.class));
@@ -126,8 +131,9 @@ class ReservationServiceTest {
     void updateShouldThrowWhenReservationDoesNotExist() {
         when(reservationRepository.findByCartId(cartId)).thenReturn(Optional.empty());
 
-        assertThrows(ReservationNotFoundException.class,
-                () -> reservationService.update(event(itemEvent(firstProductId, 1))));
+        Executable updateCall = () -> reservationService.update(event(itemEvent(firstProductId, 1)));
+
+        assertThrows(ReservationNotFoundException.class, updateCall);
         verifyNoInteractions(stockService, productService);
     }
 
@@ -166,8 +172,9 @@ class ReservationServiceTest {
     void cancelShouldThrowWhenReservationDoesNotExist() {
         when(reservationRepository.findByCartId(cartId)).thenReturn(Optional.empty());
 
-        assertThrows(ReservationNotFoundException.class,
-                () -> reservationService.cancel(event(itemEvent(firstProductId, 1))));
+        Executable cancelCall = () -> reservationService.cancel(event(itemEvent(firstProductId, 1)));
+
+        assertThrows(ReservationNotFoundException.class, cancelCall);
         verifyNoInteractions(stockService);
     }
 

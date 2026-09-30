@@ -11,6 +11,7 @@ import com.alanensina.inventory.repositories.StockRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.api.function.Executable;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
@@ -111,8 +112,9 @@ class StockServiceTest {
     void updateShouldThrowWhenStockMissing() {
         when(stockRepository.findById(stockId)).thenReturn(Optional.empty());
 
-        assertThrows(StockNotFoundException.class,
-                () -> stockService.updateStock(new UpdateStockDTO(stockId, productId, 12)));
+        Executable updateCall = () -> stockService.updateStock(new UpdateStockDTO(stockId, productId, 12));
+
+        assertThrows(StockNotFoundException.class, updateCall);
         verifyNoInteractions(productService);
     }
 
