@@ -1,6 +1,7 @@
 package com.alanensina.inventory.consumers;
 
 import com.alanensina.inventory.dtos.OrderEventDTO;
+import com.alanensina.inventory.enums.OrderEventType;
 import com.alanensina.inventory.exceptions.InvalidKafkaOrderEventTypeException;
 import com.alanensina.inventory.exceptions.KafkaErrorException;
 import com.alanensina.inventory.services.ReservationService;
@@ -26,23 +27,18 @@ public class OrderConsumer {
         try {
             var event = objectMapper.readValue(message, OrderEventDTO.class);
 
-            switch(event.eventType()){
-
-                case CREATE:
-                    reservationService.create(event);
-                    break;
-
-                case UPDATE:
-                    reservationService.update(event);
-                    break;
-
-                case CANCEL:
-                    reservationService.cancel(event);
-                    break;
-
-                default:
-                    log.error("Unhandled event type: {}", event.eventType());
-                    throw new InvalidKafkaOrderEventTypeException(event.eventType().name());
+            if (OrderEventType.CREATE == event.eventType()) {
+                reservationService.create(event);
+            }
+            else if (OrderEventType.UPDATE == event.eventType()) {
+                reservationService.update(event);
+            }
+            else if (OrderEventType.CANCEL == event.eventType()) {
+                reservationService.cancel(event);
+            }
+            else {
+                log.error("Unhandled event type: {}", event.eventType());
+                throw new InvalidKafkaOrderEventTypeException(String.valueOf(event.eventType()));
             }
         } catch (Exception e) {
             log.error("Error processing Kafka message: {}", message, e);

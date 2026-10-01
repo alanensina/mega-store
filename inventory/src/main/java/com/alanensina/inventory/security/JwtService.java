@@ -23,7 +23,9 @@ public class JwtService {
             var jwt = verifier.verify(token);
             return jwt.getSubject() != null
                     && !jwt.getSubject().isBlank()
+                    && !jwt.getClaim("username").isMissing()
                     && !jwt.getClaim("username").isNull()
+                    && !jwt.getClaim("email").isMissing()
                     && !jwt.getClaim("email").isNull();
         } catch (JWTVerificationException e) {
             log.warn("JWT verification failed: {}", e.getMessage());

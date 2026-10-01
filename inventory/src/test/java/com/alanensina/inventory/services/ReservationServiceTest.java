@@ -138,6 +138,19 @@ class ReservationServiceTest {
     }
 
     @Test
+    void updateShouldThrowWhenReservationDisappearsBeforeItsItemsAreCleared() {
+        Reservation reservation = reservation(ReservationStatus.AWAITING_PAYMENT);
+        when(reservationRepository.findByCartId(cartId)).thenReturn(Optional.of(reservation));
+        when(reservationRepository.findById(reservationId)).thenReturn(Optional.empty());
+
+        assertThrows(ReservationNotFoundException.class,
+                () -> reservationService.update(event(itemEvent(firstProductId, 1))));
+
+        verifyNoInteractions(stockService, productService, reservationItemRepository);
+        verify(reservationRepository, never()).save(any());
+    }
+
+    @Test
     void cancelShouldReturnAlreadyCancelledReservationWithoutSaving() {
         Reservation reservation = reservation(ReservationStatus.CANCELLED);
         reservation.setItems(new ArrayList<>(List.of(item(reservation, firstProductId, 2))));
