@@ -48,12 +48,13 @@ class OrderConsumerTest {
     }
 
     @Test
-    void consumeWrapsErrorsFromReservationService() {
+    void consumeWrapsErrorsFromReservationService() throws Exception {
         doThrow(new IllegalStateException("service failed"))
                 .when(reservationService).create(any(OrderEventDTO.class));
 
+        String message = message(OrderEventType.CREATE);
         KafkaErrorException exception = assertThrows(KafkaErrorException.class,
-                () -> consumer.consume(message(OrderEventType.CREATE)));
+                () -> consumer.consume(message));
 
         org.junit.jupiter.api.Assertions.assertTrue(exception.getMessage().contains("service failed"));
     }

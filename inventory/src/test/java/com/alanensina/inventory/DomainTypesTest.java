@@ -20,29 +20,71 @@ import static org.junit.jupiter.api.Assertions.*;
 class DomainTypesTest {
 
     @Test
-    void dtoRecordsExposeValuesAndValueSemantics() {
+    void productDtosExposeValuesAndValueSemantics() {
         UUID id = UUID.randomUUID();
         LocalDateTime now = LocalDateTime.of(2024, 1, 2, 10, 30);
         var createProduct = new CreateProductDTO("Keyboard", true);
-        var createStock = new CreateStockDTO(id, 3);
-        var createReservation = new CreateReservationDTO(id, List.of(new ReservationItemDTO(id, 3)),
-                ReservationStatus.PAID, now, now);
-        var orderEvent = new OrderEventDTO(OrderEventType.CREATE, id,
-                List.of(new ReservationItemEvent(id, 3)), ReservationStatus.PAID, now, now);
         var product = new ProductDTO(id, "Keyboard", true, now, now);
-        var reservation = new ReservationDTO(id, id, List.of(new ReservationItemDTO(id, 3)),
-                ReservationStatus.PAID);
-        var reservationItem = new ReservationItemDTO(id, 3);
-        var reservationItemEvent = new ReservationItemEvent(id, 3);
-        var stock = new StockDTO(id, null, 3);
         var updateProduct = new UpdateProductDTO(id, "Keyboard", true);
-        var updateStock = new UpdateStockDTO(id, id, 3);
 
         assertAll(
                 () -> assertEquals("Keyboard", createProduct.name()),
                 () -> assertTrue(createProduct.active()),
+                () -> assertEquals(id, product.id()),
+                () -> assertEquals("Keyboard", product.name()),
+                () -> assertTrue(product.active()),
+                () -> assertEquals(now, product.createdAt()),
+                () -> assertEquals(now, product.updatedAt()),
+                () -> assertEquals(id, updateProduct.id()),
+                () -> assertEquals("Keyboard", updateProduct.name()),
+                () -> assertTrue(updateProduct.active())
+        );
+
+        assertEquals(new CreateProductDTO("Keyboard", true), createProduct);
+        assertEquals(createProduct.hashCode(), new CreateProductDTO("Keyboard", true).hashCode());
+        assertNotNull(createProduct.toString());
+        assertEquals(new ProductDTO(id, "Keyboard", true, now, now), product);
+        assertNotNull(product.toString());
+        assertEquals(new UpdateProductDTO(id, "Keyboard", true), updateProduct);
+        assertNotNull(updateProduct.toString());
+    }
+
+    @Test
+    void stockDtosExposeValuesAndValueSemantics() {
+        UUID id = UUID.randomUUID();
+        var createStock = new CreateStockDTO(id, 3);
+        var stock = new StockDTO(id, null, 3);
+        var updateStock = new UpdateStockDTO(id, id, 3);
+
+        assertAll(
                 () -> assertEquals(id, createStock.productId()),
                 () -> assertEquals(3, createStock.quantity()),
+                () -> assertEquals(id, stock.id()),
+                () -> assertNull(stock.product()),
+                () -> assertEquals(3, stock.quantity()),
+                () -> assertEquals(id, updateStock.id()),
+                () -> assertEquals(id, updateStock.productId()),
+                () -> assertEquals(3, updateStock.quantity())
+        );
+
+        assertEquals(new CreateStockDTO(id, 3), createStock);
+        assertNotNull(createStock.toString());
+        assertEquals(new StockDTO(id, null, 3), stock);
+        assertNotNull(stock.toString());
+        assertEquals(new UpdateStockDTO(id, id, 3), updateStock);
+        assertNotNull(updateStock.toString());
+    }
+
+    @Test
+    void reservationCreationDtosExposeValuesAndValueSemantics() {
+        UUID id = UUID.randomUUID();
+        LocalDateTime now = LocalDateTime.of(2024, 1, 2, 10, 30);
+        var createReservation = new CreateReservationDTO(id, List.of(new ReservationItemDTO(id, 3)),
+                ReservationStatus.PAID, now, now);
+        var orderEvent = new OrderEventDTO(OrderEventType.CREATE, id,
+                List.of(new ReservationItemEvent(id, 3)), ReservationStatus.PAID, now, now);
+
+        assertAll(
                 () -> assertEquals(id, createReservation.cartId()),
                 () -> assertEquals(ReservationStatus.PAID, createReservation.status()),
                 () -> assertEquals(now, createReservation.createdAt()),
@@ -52,55 +94,41 @@ class DomainTypesTest {
                 () -> assertEquals(3, orderEvent.items().getFirst().quantity()),
                 () -> assertEquals(ReservationStatus.PAID, orderEvent.status()),
                 () -> assertEquals(now, orderEvent.createdAt()),
-                () -> assertEquals(now, orderEvent.updatedAt()),
-                () -> assertEquals(id, product.id()),
-                () -> assertEquals("Keyboard", product.name()),
-                () -> assertTrue(product.active()),
-                () -> assertEquals(now, product.createdAt()),
-                () -> assertEquals(now, product.updatedAt()),
-                () -> assertEquals(id, reservation.id()),
-                () -> assertEquals(id, reservation.cartId()),
-                () -> assertEquals(ReservationStatus.PAID, reservation.status()),
-                () -> assertEquals(id, reservationItem.productId()),
-                () -> assertEquals(3, reservationItem.quantity()),
-                () -> assertEquals(id, reservationItemEvent.productId()),
-                () -> assertEquals(3, reservationItemEvent.quantity()),
-                () -> assertEquals(id, stock.id()),
-                () -> assertNull(stock.product()),
-                () -> assertEquals(3, stock.quantity()),
-                () -> assertEquals(id, updateProduct.id()),
-                () -> assertEquals("Keyboard", updateProduct.name()),
-                () -> assertTrue(updateProduct.active()),
-                () -> assertEquals(id, updateStock.id()),
-                () -> assertEquals(id, updateStock.productId()),
-                () -> assertEquals(3, updateStock.quantity())
+                () -> assertEquals(now, orderEvent.updatedAt())
         );
 
-        assertEquals(new CreateProductDTO("Keyboard", true), createProduct);
-        assertEquals(createProduct.hashCode(), new CreateProductDTO("Keyboard", true).hashCode());
-        assertNotNull(createProduct.toString());
-        assertEquals(new CreateStockDTO(id, 3), createStock);
-        assertNotNull(createStock.toString());
         assertEquals(new CreateReservationDTO(id, createReservation.items(), ReservationStatus.PAID, now, now),
                 createReservation);
         assertNotNull(createReservation.toString());
         assertEquals(new OrderEventDTO(OrderEventType.CREATE, id, orderEvent.items(),
                 ReservationStatus.PAID, now, now), orderEvent);
         assertNotNull(orderEvent.toString());
-        assertEquals(new ProductDTO(id, "Keyboard", true, now, now), product);
-        assertNotNull(product.toString());
+    }
+
+    @Test
+    void reservationDtosExposeValuesAndValueSemantics() {
+        UUID id = UUID.randomUUID();
+        var reservation = new ReservationDTO(id, id, List.of(new ReservationItemDTO(id, 3)),
+                ReservationStatus.PAID);
+        var reservationItem = new ReservationItemDTO(id, 3);
+        var reservationItemEvent = new ReservationItemEvent(id, 3);
+
+        assertAll(
+                () -> assertEquals(id, reservation.id()),
+                () -> assertEquals(id, reservation.cartId()),
+                () -> assertEquals(ReservationStatus.PAID, reservation.status()),
+                () -> assertEquals(id, reservationItem.productId()),
+                () -> assertEquals(3, reservationItem.quantity()),
+                () -> assertEquals(id, reservationItemEvent.productId()),
+                () -> assertEquals(3, reservationItemEvent.quantity())
+        );
+
         assertEquals(new ReservationDTO(id, id, reservation.items(), ReservationStatus.PAID), reservation);
         assertNotNull(reservation.toString());
         assertEquals(new ReservationItemDTO(id, 3), reservationItem);
         assertNotNull(reservationItem.toString());
         assertEquals(new ReservationItemEvent(id, 3), reservationItemEvent);
         assertNotNull(reservationItemEvent.toString());
-        assertEquals(new StockDTO(id, null, 3), stock);
-        assertNotNull(stock.toString());
-        assertEquals(new UpdateProductDTO(id, "Keyboard", true), updateProduct);
-        assertNotNull(updateProduct.toString());
-        assertEquals(new UpdateStockDTO(id, id, 3), updateStock);
-        assertNotNull(updateStock.toString());
     }
 
     @Test

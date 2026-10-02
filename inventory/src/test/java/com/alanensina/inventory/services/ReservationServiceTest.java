@@ -142,9 +142,10 @@ class ReservationServiceTest {
         Reservation reservation = reservation(ReservationStatus.AWAITING_PAYMENT);
         when(reservationRepository.findByCartId(cartId)).thenReturn(Optional.of(reservation));
         when(reservationRepository.findById(reservationId)).thenReturn(Optional.empty());
+        OrderEventDTO orderEvent = event(itemEvent(firstProductId, 1));
 
         assertThrows(ReservationNotFoundException.class,
-                () -> reservationService.update(event(itemEvent(firstProductId, 1))));
+                () -> reservationService.update(orderEvent));
 
         verifyNoInteractions(stockService, productService, reservationItemRepository);
         verify(reservationRepository, never()).save(any());

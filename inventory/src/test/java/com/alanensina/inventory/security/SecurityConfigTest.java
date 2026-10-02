@@ -16,7 +16,7 @@ import static org.mockito.Mockito.*;
 class SecurityConfigTest {
 
     @Test
-    void createsJwtFilterAndStatelessSecurityChain() throws Exception {
+    void createsJwtFilterAndStatelessSecurityChain() {
         SecurityConfig config = new SecurityConfig(new JwtService("test-secret"));
 
         assertInstanceOf(JwtAuthenticationFilter.class, config.jwtAuthenticationFilter());
@@ -31,7 +31,7 @@ class SecurityConfigTest {
     }
 
     @Test
-    void wrapsSecurityChainConfigurationFailures() throws Exception {
+    void wrapsSecurityChainConfigurationFailures() {
         SecurityConfig config = new SecurityConfig(new JwtService("test-secret"));
         HttpSecurity http = mock(HttpSecurity.class);
         configureDsl(http);
@@ -43,7 +43,7 @@ class SecurityConfigTest {
         assertTrue(exception.getMessage().contains("security setup failed"));
     }
 
-    private void configureDsl(HttpSecurity http) throws Exception {
+    private void configureDsl(HttpSecurity http) {
         var csrf = mock(CsrfConfigurer.class);
         when(csrf.disable()).thenReturn(http);
         when(http.csrf(any())).thenAnswer(invocation -> {
