@@ -22,6 +22,10 @@ A small Spring Boot microservice that manages products, stock and reservations. 
 - Auth0 Java JWT
 - springdoc-openapi (Swagger UI)
 
+## Unit test coverage
+
+The Inventory service has 100% unit test coverage for lines, methods and branches.
+
 ## Project structure (important files)
 
 - src/main/java/com/alanensina/inventory/

@@ -42,6 +42,10 @@ The e-mail content is composed by `EmailService`, which uses Spring Mail to send
 - Apache Kafka
 - Gmail SMTP
 
+## Unit test coverage
+
+The Notification service has 100% unit test coverage for lines, methods and branches.
+
 ## Project structure
 
 - `src/main/java/com/alanensina/notification/`

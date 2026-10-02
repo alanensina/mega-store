@@ -24,6 +24,10 @@ Customer API is a Spring Boot REST service for managing customer records and aut
 - SpringDoc OpenAPI / Swagger UI
 - Maven
 
+## Unit test coverage
+
+The Customer service has 100% unit test coverage for lines, methods and branches.
+
 ## Database model
 
 The application persists customer data in a `CUSTOMER` table with these fields:
