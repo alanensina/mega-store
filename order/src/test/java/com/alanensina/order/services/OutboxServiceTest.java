@@ -87,12 +87,13 @@ class OutboxServiceTest {
     void serializationFailureIsWrappedWithItsCause() throws JsonProcessingException {
         JsonProcessingException cause = new JsonProcessingException("invalid event") {};
         when(objectMapper.writeValueAsString(any())).thenThrow(cause);
+        OrderEventDTO event = new OrderEventDTO(
+                OrderEventType.CREATE, orderId, List.of(), ReservationStatus.AWAITING_PAYMENT,
+                LocalDateTime.now(), LocalDateTime.now());
 
         IllegalStateException exception = assertThrows(
                 IllegalStateException.class,
-                () -> outboxService.addOrderEvent(new OrderEventDTO(
-                        OrderEventType.CREATE, orderId, List.of(), ReservationStatus.AWAITING_PAYMENT,
-                        LocalDateTime.now(), LocalDateTime.now())));
+                () -> outboxService.addOrderEvent(event));
 
         assertEquals("Could not serialize outbox event", exception.getMessage());
         assertEquals(cause, exception.getCause());

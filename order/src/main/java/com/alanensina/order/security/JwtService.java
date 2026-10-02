@@ -21,10 +21,14 @@ public class JwtService {
     public boolean validateToken(String token) {
         try {
             var jwt = verifier.verify(token);
+            var username = jwt.getClaim("username");
+            var email = jwt.getClaim("email");
             return jwt.getSubject() != null
                     && !jwt.getSubject().isBlank()
-                    && !jwt.getClaim("username").isNull()
-                    && !jwt.getClaim("email").isNull();
+                    && !username.isMissing()
+                    && !username.isNull()
+                    && !email.isMissing()
+                    && !email.isNull();
         } catch (JWTVerificationException e) {
             log.warn("JWT verification failed: {}", e.getMessage());
             return false;

@@ -103,9 +103,10 @@ class CartServiceTest {
     void createWrapsCustomerLookupFailures() {
         try (var _ = mockStaticRestClientThrowing(
                 new RestClientException("customer service unavailable"))) {
+            CreateCartDTO createCartDTO = new CreateCartDTO(customerId, List.of(itemDTO));
             CustomerDetailsFetchException exception = assertThrows(
                     CustomerDetailsFetchException.class,
-                    () -> cartService.create(new CreateCartDTO(customerId, List.of(itemDTO))));
+                    () -> cartService.create(createCartDTO));
             assertNotNull(exception.getCause());
         }
     }
@@ -150,9 +151,10 @@ class CartServiceTest {
     @Test
     void updateThrowsWhenCartDoesNotExist() {
         when(cartRepository.findById(cartId)).thenReturn(Optional.empty());
+        UpdateCartDTO updateCartDTO = new UpdateCartDTO(
+                cartId, customerId, ReservationStatus.PAID, List.of(itemDTO));
 
-        assertThrows(CartNotFoundException.class, () -> cartService.update(
-                new UpdateCartDTO(cartId, customerId, ReservationStatus.PAID, List.of(itemDTO))));
+        assertThrows(CartNotFoundException.class, () -> cartService.update(updateCartDTO));
         verify(cartRepository, never()).save(any(Cart.class));
     }
 
