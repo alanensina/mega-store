@@ -14,7 +14,11 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
+import org.mockito.ArgumentCaptor;
+
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.*;
 
 class OrderConsumerTest {
@@ -36,9 +40,7 @@ class OrderConsumerTest {
         consumer.consume(message(OrderEventType.UPDATE));
         consumer.consume(message(OrderEventType.CANCEL));
 
-        verify(reservationService).create(any(OrderEventDTO.class));
-        verify(reservationService).update(any(OrderEventDTO.class));
-        verify(reservationService).cancel(any(OrderEventDTO.class));
+        verify(reservationService, times(3)).process(any(OrderEventDTO.class));
     }
 
     @Test
@@ -50,7 +52,7 @@ class OrderConsumerTest {
     @Test
     void consumeWrapsErrorsFromReservationService() throws Exception {
         doThrow(new IllegalStateException("service failed"))
-                .when(reservationService).create(any(OrderEventDTO.class));
+                .when(reservationService).process(any(OrderEventDTO.class));
 
         String message = message(OrderEventType.CREATE);
         KafkaErrorException exception = assertThrows(KafkaErrorException.class,
@@ -60,19 +62,36 @@ class OrderConsumerTest {
     }
 
     @Test
-    void consumeWrapsEventWithoutType() throws Exception {
+    void consumePassesEventWithoutTypeToReservationService() throws Exception {
         String message = new JacksonConfig().objectMapper().writeValueAsString(
                 new OrderEventDTO(null, cartId, List.of(), ReservationStatus.PAID,
-                        LocalDateTime.now(), LocalDateTime.now()));
+                        LocalDateTime.now(), LocalDateTime.now(), UUID.randomUUID()));
 
-        assertThrows(KafkaErrorException.class, () -> consumer.consume(message));
-        verifyNoInteractions(reservationService);
+        consumer.consume(message);
+
+        verify(reservationService).process(argThat(event -> event.eventType() == null));
+    }
+
+    @Test
+    void consumeAssignsStableIdsToLegacyEvents() throws Exception {
+        String legacyMessage = new JacksonConfig().objectMapper().writeValueAsString(
+                new OrderEventDTO(OrderEventType.CREATE, cartId, List.of(),
+                        ReservationStatus.PAID, LocalDateTime.now(), LocalDateTime.now(), null));
+
+        consumer.consume(legacyMessage);
+        consumer.consume(legacyMessage);
+
+        ArgumentCaptor<OrderEventDTO> captor = ArgumentCaptor.forClass(OrderEventDTO.class);
+        verify(reservationService, times(2)).process(captor.capture());
+        UUID eventId = captor.getAllValues().getFirst().eventId();
+        assertNotNull(eventId);
+        assertEquals(eventId, captor.getAllValues().get(1).eventId());
     }
 
     private String message(OrderEventType type) throws Exception {
         return new JacksonConfig().objectMapper().writeValueAsString(
                 new OrderEventDTO(type, cartId,
                         List.of(new ReservationItemEvent(UUID.randomUUID(), 1)),
-                        ReservationStatus.PAID, LocalDateTime.now(), LocalDateTime.now()));
+                        ReservationStatus.PAID, LocalDateTime.now(), LocalDateTime.now(), UUID.randomUUID()));
     }
 }

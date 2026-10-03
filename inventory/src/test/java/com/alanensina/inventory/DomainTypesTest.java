@@ -82,7 +82,7 @@ class DomainTypesTest {
         var createReservation = new CreateReservationDTO(id, List.of(new ReservationItemDTO(id, 3)),
                 ReservationStatus.PAID, now, now);
         var orderEvent = new OrderEventDTO(OrderEventType.CREATE, id,
-                List.of(new ReservationItemEvent(id, 3)), ReservationStatus.PAID, now, now);
+                List.of(new ReservationItemEvent(id, 3)), ReservationStatus.PAID, now, now, id);
 
         assertAll(
                 () -> assertEquals(id, createReservation.cartId()),
@@ -94,14 +94,15 @@ class DomainTypesTest {
                 () -> assertEquals(3, orderEvent.items().getFirst().quantity()),
                 () -> assertEquals(ReservationStatus.PAID, orderEvent.status()),
                 () -> assertEquals(now, orderEvent.createdAt()),
-                () -> assertEquals(now, orderEvent.updatedAt())
+                () -> assertEquals(now, orderEvent.updatedAt()),
+                () -> assertEquals(id, orderEvent.eventId())
         );
 
         assertEquals(new CreateReservationDTO(id, createReservation.items(), ReservationStatus.PAID, now, now),
                 createReservation);
         assertNotNull(createReservation.toString());
         assertEquals(new OrderEventDTO(OrderEventType.CREATE, id, orderEvent.items(),
-                ReservationStatus.PAID, now, now), orderEvent);
+                ReservationStatus.PAID, now, now, id), orderEvent);
         assertNotNull(orderEvent.toString());
     }
 

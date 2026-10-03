@@ -13,6 +13,7 @@ public record OrderEventDTO(
         List<ReservationItemEvent> items,
         ReservationStatus status,
         LocalDateTime createdAt,
-        LocalDateTime updatedAt
+        LocalDateTime updatedAt,
+        UUID eventId
 ) {
 }

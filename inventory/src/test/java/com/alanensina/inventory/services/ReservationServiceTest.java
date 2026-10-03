@@ -4,11 +4,14 @@ import com.alanensina.inventory.dtos.*;
 import com.alanensina.inventory.enums.OrderEventType;
 import com.alanensina.inventory.enums.ReservationStatus;
 import com.alanensina.inventory.enums.StockOperation;
+import com.alanensina.inventory.exceptions.InvalidKafkaOrderEventTypeException;
+import com.alanensina.inventory.exceptions.OrderEventIdRequiredException;
 import com.alanensina.inventory.exceptions.ReservationNotFoundException;
 import com.alanensina.inventory.models.Product;
 import com.alanensina.inventory.models.Reservation;
 import com.alanensina.inventory.models.ReservationItem;
 import com.alanensina.inventory.repositories.ReservationItemRepository;
+import com.alanensina.inventory.repositories.ProcessedOrderEventRepository;
 import com.alanensina.inventory.repositories.ReservationRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -34,6 +37,9 @@ class ReservationServiceTest {
 
     @Mock
     private ReservationItemRepository reservationItemRepository;
+
+    @Mock
+    private ProcessedOrderEventRepository processedOrderEventRepository;
 
     @Mock
     private ProductService productService;
@@ -105,6 +111,86 @@ class ReservationServiceTest {
         verify(stockService).updateStockQuantityByOperation(firstProductId, 2, StockOperation.REMOVE);
         verify(stockService).updateStockQuantityByOperation(secondProductId, 4, StockOperation.REMOVE);
         verify(reservationRepository).save(any(Reservation.class));
+    }
+
+    @Test
+    void processShouldIgnoreAnAlreadyRegisteredEvent() {
+        OrderEventDTO event = event(itemEvent(firstProductId, 1));
+        when(processedOrderEventRepository.registerIfNotProcessed(event.eventId())).thenReturn(0);
+
+        reservationService.process(event);
+
+        verifyNoInteractions(reservationRepository, reservationItemRepository, productService, stockService);
+    }
+
+    @Test
+    void processShouldRegisterAndApplyANewEvent() {
+        OrderEventDTO event = event();
+        when(processedOrderEventRepository.registerIfNotProcessed(event.eventId())).thenReturn(1);
+        when(reservationRepository.findByCartId(cartId)).thenReturn(Optional.empty());
+        when(reservationRepository.save(any(Reservation.class))).thenAnswer(invocation -> {
+            Reservation saved = invocation.getArgument(0);
+            saved.setId(reservationId);
+            return saved;
+        });
+
+        reservationService.process(event);
+
+        verify(processedOrderEventRepository).registerIfNotProcessed(event.eventId());
+        verify(reservationRepository).save(any(Reservation.class));
+    }
+
+    @Test
+    void processShouldDispatchUpdateEvents() {
+        OrderEventDTO event = event(OrderEventType.UPDATE, UUID.randomUUID());
+        when(processedOrderEventRepository.registerIfNotProcessed(event.eventId())).thenReturn(1);
+        Reservation reservation = reservation(ReservationStatus.AWAITING_PAYMENT);
+        when(reservationRepository.findByCartId(cartId)).thenReturn(Optional.of(reservation));
+        when(reservationRepository.findById(reservationId)).thenReturn(Optional.of(reservation));
+        when(reservationRepository.save(any(Reservation.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        reservationService.process(event);
+
+        verify(reservationRepository).findByCartId(cartId);
+        verify(reservationRepository, times(2)).save(reservation);
+    }
+
+    @Test
+    void processShouldDispatchCancelEvents() {
+        OrderEventDTO event = event(OrderEventType.CANCEL, UUID.randomUUID());
+        when(processedOrderEventRepository.registerIfNotProcessed(event.eventId())).thenReturn(1);
+        Reservation reservation = reservation(ReservationStatus.PAID);
+        when(reservationRepository.findByCartId(cartId)).thenReturn(Optional.of(reservation));
+        when(reservationRepository.save(reservation)).thenReturn(reservation);
+
+        reservationService.process(event);
+
+        assertEquals(ReservationStatus.CANCELLED, reservation.getStatus());
+        verify(reservationRepository).save(reservation);
+    }
+
+    @Test
+    void processShouldRejectEventsWithoutAnId() {
+        OrderEventDTO event = new OrderEventDTO(OrderEventType.CREATE, cartId, List.of(),
+                ReservationStatus.PAID, createdAt, updatedAt, null);
+
+        OrderEventIdRequiredException exception = assertThrows(
+                OrderEventIdRequiredException.class, () -> reservationService.process(event));
+
+        assertEquals("Order event ID is required.", exception.getMessage());
+        verifyNoInteractions(processedOrderEventRepository, reservationRepository, productService, stockService);
+    }
+
+    @Test
+    void processShouldRejectUnknownEventTypes() {
+        OrderEventDTO event = new OrderEventDTO(null, cartId, List.of(),
+                ReservationStatus.PAID, createdAt, updatedAt, UUID.randomUUID());
+        when(processedOrderEventRepository.registerIfNotProcessed(event.eventId())).thenReturn(1);
+
+        assertThrows(InvalidKafkaOrderEventTypeException.class, () -> reservationService.process(event));
+
+        verify(processedOrderEventRepository).registerIfNotProcessed(event.eventId());
+        verifyNoInteractions(reservationRepository, productService, stockService);
     }
 
     @Test
@@ -230,7 +316,17 @@ class ReservationServiceTest {
 
     private OrderEventDTO event(ReservationItemEvent... items) {
         return new OrderEventDTO(OrderEventType.CREATE, cartId, List.of(items),
-                ReservationStatus.PAID, createdAt, updatedAt);
+                ReservationStatus.PAID, createdAt, updatedAt, UUID.randomUUID());
+    }
+
+    private OrderEventDTO event() {
+        return new OrderEventDTO(OrderEventType.CREATE, cartId, List.of(),
+                ReservationStatus.PAID, createdAt, updatedAt, UUID.randomUUID());
+    }
+
+    private OrderEventDTO event(OrderEventType type, UUID eventId) {
+        return new OrderEventDTO(type, cartId, List.of(),
+                ReservationStatus.PAID, createdAt, updatedAt, eventId);
     }
 
     private ReservationItemEvent itemEvent(UUID productId, int quantity) {

@@ -95,7 +95,9 @@ class CartServiceTest {
         ArgumentCaptor<Cart> cartCaptor = ArgumentCaptor.forClass(Cart.class);
         verify(cartRepository).save(cartCaptor.capture());
         assertEquals(cartId, cartCaptor.getValue().getItems().getFirst().getCart().getId());
-        verify(outboxService).addOrderEvent(any(OrderEventDTO.class));
+        ArgumentCaptor<OrderEventDTO> eventCaptor = ArgumentCaptor.forClass(OrderEventDTO.class);
+        verify(outboxService).addOrderEvent(eventCaptor.capture());
+        assertNotNull(eventCaptor.getValue().eventId());
         verify(outboxService).addNotificationEvent(any(NotificationDTO.class));
     }
 

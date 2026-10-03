@@ -1,12 +1,16 @@
 package com.alanensina.inventory.services;
 
 import com.alanensina.inventory.dtos.*;
+import com.alanensina.inventory.enums.OrderEventType;
 import com.alanensina.inventory.enums.ReservationStatus;
 import com.alanensina.inventory.enums.StockOperation;
+import com.alanensina.inventory.exceptions.InvalidKafkaOrderEventTypeException;
+import com.alanensina.inventory.exceptions.OrderEventIdRequiredException;
 import com.alanensina.inventory.exceptions.ReservationNotFoundException;
 import com.alanensina.inventory.models.Product;
 import com.alanensina.inventory.models.Reservation;
 import com.alanensina.inventory.models.ReservationItem;
+import com.alanensina.inventory.repositories.ProcessedOrderEventRepository;
 import com.alanensina.inventory.repositories.ReservationItemRepository;
 import com.alanensina.inventory.repositories.ReservationRepository;
 import jakarta.transaction.Transactional;
@@ -29,8 +33,31 @@ public class ReservationService {
 
     private final ReservationRepository reservationRepository;
     private final ReservationItemRepository reservationItemRepository;
+    private final ProcessedOrderEventRepository processedOrderEventRepository;
     private final ProductService productService;
     private final StockService stockService;
+
+    @Transactional
+    public void process(OrderEventDTO event) {
+        if (event.eventId() == null) {
+            throw new OrderEventIdRequiredException();
+        }
+
+        if (processedOrderEventRepository.registerIfNotProcessed(event.eventId()) == 0) {
+            log.info("Ignoring duplicate order event {}", event.eventId());
+            return;
+        }
+
+        if (event.eventType() == OrderEventType.CREATE) {
+            create(event);
+        } else if (event.eventType() == OrderEventType.UPDATE) {
+            update(event);
+        } else if (event.eventType() == OrderEventType.CANCEL) {
+            cancel(event);
+        } else {
+            throw new InvalidKafkaOrderEventTypeException(String.valueOf(event.eventType()));
+        }
+    }
 
     @Transactional
     public ReservationDTO create(@Valid OrderEventDTO event) {

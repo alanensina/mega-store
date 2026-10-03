@@ -1,8 +1,6 @@
 package com.alanensina.inventory.consumers;
 
 import com.alanensina.inventory.dtos.OrderEventDTO;
-import com.alanensina.inventory.enums.OrderEventType;
-import com.alanensina.inventory.exceptions.InvalidKafkaOrderEventTypeException;
 import com.alanensina.inventory.exceptions.KafkaErrorException;
 import com.alanensina.inventory.services.ReservationService;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -10,6 +8,9 @@ import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Service;
+
+import java.nio.charset.StandardCharsets;
+import java.util.UUID;
 
 @Service
 @AllArgsConstructor
@@ -26,20 +27,20 @@ public class OrderConsumer {
     public void consume(String message){
         try {
             var event = objectMapper.readValue(message, OrderEventDTO.class);
-
-            if (OrderEventType.CREATE == event.eventType()) {
-                reservationService.create(event);
+            if (event.eventId() == null) {
+                var legacyEventId = UUID.nameUUIDFromBytes(message.getBytes(StandardCharsets.UTF_8));
+                log.warn("Order event has no eventId; using a deterministic ID for this legacy message");
+                event = new OrderEventDTO(
+                        event.eventType(),
+                        event.cartId(),
+                        event.items(),
+                        event.status(),
+                        event.createdAt(),
+                        event.updatedAt(),
+                        legacyEventId
+                );
             }
-            else if (OrderEventType.UPDATE == event.eventType()) {
-                reservationService.update(event);
-            }
-            else if (OrderEventType.CANCEL == event.eventType()) {
-                reservationService.cancel(event);
-            }
-            else {
-                log.error("Unhandled event type: {}", event.eventType());
-                throw new InvalidKafkaOrderEventTypeException(String.valueOf(event.eventType()));
-            }
+            reservationService.process(event);
         } catch (Exception e) {
             log.error("Error processing Kafka message: {}", message, e);
             throw new KafkaErrorException(e.getMessage());

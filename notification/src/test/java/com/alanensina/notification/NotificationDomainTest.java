@@ -60,12 +60,10 @@ class NotificationDomainTest {
 
     @Test
     void notificationDeliveryShouldSupportConstructorsAndSetters() {
-        NotificationDelivery delivery = new NotificationDelivery(
-                UUID.randomUUID(),
-                UUID.randomUUID(),
-                NotificationType.NEW_ORDER,
-                LocalDateTime.now());
-
+        NotificationDelivery delivery = new NotificationDelivery();
+        delivery.setOrderId(UUID.randomUUID());
+        delivery.setNotificationType(NotificationType.NEW_ORDER);
+        delivery.setDeliveredAt(LocalDateTime.now());
         assertNotNull(delivery);
         delivery.setOrderId(UUID.randomUUID());
         delivery.setNotificationType(NotificationType.CANCEL);

@@ -52,7 +52,8 @@ class OutboxServiceTest {
                 List.of(new ReservationItem(UUID.randomUUID(), 2)),
                 ReservationStatus.AWAITING_PAYMENT,
                 LocalDateTime.now(),
-                LocalDateTime.now());
+                LocalDateTime.now(),
+                UUID.randomUUID());
         when(objectMapper.writeValueAsString(event)).thenReturn("{\"event\":\"order\"}");
 
         outboxService.addOrderEvent(event);
@@ -89,7 +90,7 @@ class OutboxServiceTest {
         when(objectMapper.writeValueAsString(any())).thenThrow(cause);
         OrderEventDTO event = new OrderEventDTO(
                 OrderEventType.CREATE, orderId, List.of(), ReservationStatus.AWAITING_PAYMENT,
-                LocalDateTime.now(), LocalDateTime.now());
+                LocalDateTime.now(), LocalDateTime.now(), UUID.randomUUID());
 
         IllegalStateException exception = assertThrows(
                 IllegalStateException.class,

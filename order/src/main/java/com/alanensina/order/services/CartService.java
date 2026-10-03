@@ -190,7 +190,8 @@ public class CartService {
                 ).toList(),
                 cart.getStatus(),
                 cart.getCreatedAt(),
-                cart.getUpdatedAt()
+                cart.getUpdatedAt(),
+                UUID.randomUUID()
         );
     }
 

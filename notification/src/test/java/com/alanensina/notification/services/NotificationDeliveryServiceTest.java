@@ -4,30 +4,20 @@ import com.alanensina.notification.dtos.CartDTO;
 import com.alanensina.notification.dtos.NotificationDTO;
 import com.alanensina.notification.enums.NotificationType;
 import com.alanensina.notification.enums.ReservationStatus;
-import com.alanensina.notification.exceptions.KafkaDataIntegrityViolationException;
-import com.alanensina.notification.models.NotificationDelivery;
 import com.alanensina.notification.repositories.NotificationDeliveryRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.dao.DataIntegrityViolationException;
 
 import java.math.BigDecimal;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoInteractions;
-import static org.mockito.Mockito.when;
-import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class NotificationDeliveryServiceTest {
@@ -64,24 +54,24 @@ class NotificationDeliveryServiceTest {
 
     @Test
     void deliverShouldIgnoreAlreadyDeliveredNotification() {
-        when(repository.existsByOrderIdAndNotificationType(orderId, NotificationType.NEW_ORDER))
-                .thenReturn(true);
+        when(repository.claimDelivery(orderId, NotificationType.NEW_ORDER.name())).thenReturn(0);
 
         deliveryService.deliver(event);
 
         verifyNoInteractions(emailService);
-        verify(repository, never()).saveAndFlush(any(NotificationDelivery.class));
+        verify(repository).claimDelivery(orderId, NotificationType.NEW_ORDER.name());
     }
 
     @Test
     void deliverShouldSendWelcomeEmailAndPersistDelivery() {
-        when(repository.existsByOrderIdAndNotificationType(orderId, NotificationType.NEW_ORDER))
-                .thenReturn(false);
+        when(repository.claimDelivery(orderId, NotificationType.NEW_ORDER.name())).thenReturn(1);
 
         deliveryService.deliver(event);
 
-        verify(emailService).sendWelcomeEmail(event);
-        verifyPersistedDelivery();
+        var inOrder = inOrder(repository, emailService);
+        inOrder.verify(repository).claimDelivery(orderId, NotificationType.NEW_ORDER.name());
+        inOrder.verify(emailService).sendWelcomeEmail(event);
+        inOrder.verify(repository).markDelivered(orderId, NotificationType.NEW_ORDER.name());
     }
 
     @Test
@@ -92,34 +82,29 @@ class NotificationDeliveryServiceTest {
                 event.orderId(),
                 event.cart(),
                 NotificationType.CANCEL);
-        when(repository.existsByOrderIdAndNotificationType(orderId, NotificationType.CANCEL))
-                .thenReturn(false);
+        when(repository.claimDelivery(orderId, NotificationType.CANCEL.name())).thenReturn(1);
 
         deliveryService.deliver(cancellation);
 
-        verify(emailService).sendCancellationEmail(cancellation);
-        verifyPersistedDelivery();
+        var inOrder = inOrder(repository, emailService);
+        inOrder.verify(repository).claimDelivery(orderId, NotificationType.CANCEL.name());
+        inOrder.verify(emailService).sendCancellationEmail(cancellation);
+        inOrder.verify(repository).markDelivered(orderId, NotificationType.CANCEL.name());
     }
 
     @Test
-    void deliverShouldWrapPersistenceIntegrityErrors() {
-        when(repository.existsByOrderIdAndNotificationType(orderId, NotificationType.NEW_ORDER))
-                .thenReturn(false);
-        doThrow(new DataIntegrityViolationException("duplicate delivery"))
-                .when(repository).saveAndFlush(any(NotificationDelivery.class));
+    void deliverShouldNotMarkDeliveryWhenEmailFails() {
+        when(repository.claimDelivery(orderId, NotificationType.NEW_ORDER.name())).thenReturn(1);
+        doThrow(new IllegalStateException("SMTP unavailable"))
+                .when(emailService).sendWelcomeEmail(event);
 
-        KafkaDataIntegrityViolationException exception = assertThrows(
-                KafkaDataIntegrityViolationException.class,
+        IllegalStateException exception = assertThrows(
+                IllegalStateException.class,
                 () -> deliveryService.deliver(event));
 
-        assertEquals("Data Integrity violation: duplicate delivery", exception.getMessage());
-        verify(emailService).sendWelcomeEmail(event);
-    }
-
-    private void verifyPersistedDelivery() {
-        ArgumentCaptor<NotificationDelivery> captor =
-                ArgumentCaptor.forClass(NotificationDelivery.class);
-        verify(repository).saveAndFlush(captor.capture());
-        assertNotNull(captor.getValue());
+        assertEquals("SMTP unavailable", exception.getMessage());
+        verify(repository).claimDelivery(orderId, NotificationType.NEW_ORDER.name());
+        verify(repository, never())
+                .markDelivered(orderId, NotificationType.NEW_ORDER.name());
     }
 }
