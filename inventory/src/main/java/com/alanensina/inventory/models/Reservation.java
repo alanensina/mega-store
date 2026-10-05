@@ -10,6 +10,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.Id;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
+import jakarta.persistence.Version;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -33,6 +34,9 @@ public class Reservation {
     private UUID id;
 
     private UUID cartId;
+
+    @Version
+    private long version;
 
     @OneToMany(mappedBy = "reservation", cascade = CascadeType.ALL)
     private List<ReservationItem> items = new ArrayList<>();

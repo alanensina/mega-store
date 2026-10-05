@@ -160,9 +160,9 @@ class DomainTypesTest {
         assertEquals("Mouse", product.getName());
         assertTrue(product.isActive());
 
-        Reservation reservation = Reservation.builder().id(id).cartId(id).items(List.of())
+        Reservation reservation = Reservation.builder().id(id).cartId(id).version(0L).items(List.of())
                 .status(ReservationStatus.PAID).reservedAt(now).updatedAt(now).build();
-        Reservation sameReservation = new Reservation(id, id, List.of(), ReservationStatus.PAID, now, now);
+        Reservation sameReservation = new Reservation(id, id, 0L, List.of(), ReservationStatus.PAID, now, now);
         assertEquals(reservation, sameReservation);
         assertEquals(reservation.hashCode(), sameReservation.hashCode());
         assertNotNull(reservation.toString());

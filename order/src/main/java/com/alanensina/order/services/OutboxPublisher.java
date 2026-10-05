@@ -7,6 +7,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -21,8 +22,9 @@ public class OutboxPublisher {
     private final KafkaTemplate<String, String> kafkaTemplate;
 
     @Scheduled(fixedDelayString = "${order.outbox.publish-delay-ms:1000}")
+    @Transactional
     public void publishPendingEvents() {
-        for (OutboxEvent event : repository.findTop100ByPublishedAtIsNullOrderByCreatedAtAsc()) {
+        for (OutboxEvent event : repository.findPendingEventsForPublishing()) {
             try {
                 kafkaTemplate.send(event.getTopic(), event.getEventKey(), event.getPayload())
                         .get(10, TimeUnit.SECONDS);

@@ -37,7 +37,7 @@ class OutboxPublisherTest {
     void publishMarksEventsAsPublishedAndClearsPreviousError() {
         OutboxEvent event = event();
         event.setLastError("old failure");
-        when(repository.findTop100ByPublishedAtIsNullOrderByCreatedAtAsc()).thenReturn(List.of(event));
+        when(repository.findPendingEventsForPublishing()).thenReturn(List.of(event));
         when(kafkaTemplate.send("orders", "order-key", "payload"))
                 .thenReturn(CompletableFuture.completedFuture(null));
 
@@ -52,7 +52,7 @@ class OutboxPublisherTest {
     void publishRecordsFailuresAndContinuesWithFollowingEvents() {
         OutboxEvent failedEvent = event();
         OutboxEvent succeedingEvent = event();
-        when(repository.findTop100ByPublishedAtIsNullOrderByCreatedAtAsc())
+        when(repository.findPendingEventsForPublishing())
                 .thenReturn(List.of(failedEvent, succeedingEvent));
         when(kafkaTemplate.send("orders", "order-key", "payload"))
                 .thenReturn(CompletableFuture.failedFuture(new ExecutionException("broker unavailable", null)),
@@ -73,7 +73,7 @@ class OutboxPublisherTest {
         OutboxEvent interruptedEvent = event();
         OutboxEvent followingEvent = event();
         CompletableFuture<SendResult<String, String>> future = mock(CompletableFuture.class);
-        when(repository.findTop100ByPublishedAtIsNullOrderByCreatedAtAsc())
+        when(repository.findPendingEventsForPublishing())
                 .thenReturn(List.of(interruptedEvent, followingEvent));
         when(kafkaTemplate.send("orders", "order-key", "payload")).thenReturn(future);
         when(future.get(10, TimeUnit.SECONDS)).thenThrow(new InterruptedException("interrupted"));
@@ -90,7 +90,7 @@ class OutboxPublisherTest {
 
     @Test
     void publishDoesNothingWhenThereAreNoPendingEvents() {
-        when(repository.findTop100ByPublishedAtIsNullOrderByCreatedAtAsc()).thenReturn(List.of());
+        when(repository.findPendingEventsForPublishing()).thenReturn(List.of());
 
         publisher.publishPendingEvents();
 
