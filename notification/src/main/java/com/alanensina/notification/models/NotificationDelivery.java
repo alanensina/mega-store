@@ -1,5 +1,6 @@
 package com.alanensina.notification.models;
 
+import com.alanensina.notification.enums.DeliveryStatus;
 import com.alanensina.notification.enums.NotificationType;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -28,8 +29,23 @@ public class NotificationDelivery {
     @Column(name = "notification_type", nullable = false)
     private NotificationType notificationType;
 
-    @Column(name = "delivered_at", nullable = false)
+    @Column(name = "delivered_at")
     private LocalDateTime deliveredAt;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status", nullable = false)
+    private DeliveryStatus status = DeliveryStatus.PENDING;
+
+    @Column(name = "lease_until")
+    private LocalDateTime leaseUntil;
+
+    public void setStatus(DeliveryStatus status) {
+        this.status = status;
+    }
+
+    public void setLeaseUntil(LocalDateTime leaseUntil) {
+        this.leaseUntil = leaseUntil;
+    }
 
     public void setOrderId(UUID orderId) {
         this.orderId = orderId;

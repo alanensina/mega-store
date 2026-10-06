@@ -9,6 +9,7 @@ import com.alanensina.notification.exceptions.EmailErrorException;
 import com.alanensina.notification.exceptions.InvalidKafkaNotificationEventTypeException;
 import com.alanensina.notification.exceptions.KafkaDataIntegrityViolationException;
 import com.alanensina.notification.exceptions.KafkaErrorException;
+import com.alanensina.notification.enums.DeliveryStatus;
 import com.alanensina.notification.models.NotificationDelivery;
 import org.junit.jupiter.api.Test;
 
@@ -68,6 +69,9 @@ class NotificationDomainTest {
         delivery.setOrderId(UUID.randomUUID());
         delivery.setNotificationType(NotificationType.CANCEL);
         delivery.setDeliveredAt(LocalDateTime.now());
+        delivery.setStatus(DeliveryStatus.SENT);
+        delivery.setLeaseUntil(LocalDateTime.now());
+        assertEquals(3, DeliveryStatus.values().length);
     }
 
     @Test

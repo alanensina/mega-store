@@ -17,6 +17,7 @@ import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -52,26 +53,41 @@ class NotificationDeliveryServiceTest {
                 NotificationType.NEW_ORDER);
     }
 
+    private static final int LEASE = NotificationDeliveryService.LEASE_SECONDS;
+
     @Test
     void deliverShouldIgnoreAlreadyDeliveredNotification() {
-        when(repository.claimDelivery(orderId, NotificationType.NEW_ORDER.name())).thenReturn(0);
+        when(repository.acquireLease(orderId, "NEW_ORDER", LEASE)).thenReturn(0);
+        when(repository.isDelivered(orderId, "NEW_ORDER")).thenReturn(true);
 
         deliveryService.deliver(event);
 
         verifyNoInteractions(emailService);
-        verify(repository).claimDelivery(orderId, NotificationType.NEW_ORDER.name());
+        verify(repository, never()).markDelivered(any(), any());
+    }
+
+    @Test
+    void deliverShouldFailWhenAnotherConsumerHoldsTheLease() {
+        when(repository.acquireLease(orderId, "NEW_ORDER", LEASE)).thenReturn(0);
+        when(repository.isDelivered(orderId, "NEW_ORDER")).thenReturn(false);
+
+        assertThrows(IllegalStateException.class, () -> deliveryService.deliver(event));
+
+        verifyNoInteractions(emailService);
+        verify(repository, never()).markDelivered(any(), any());
     }
 
     @Test
     void deliverShouldSendWelcomeEmailAndPersistDelivery() {
-        when(repository.claimDelivery(orderId, NotificationType.NEW_ORDER.name())).thenReturn(1);
+        when(repository.acquireLease(orderId, "NEW_ORDER", LEASE)).thenReturn(1);
 
         deliveryService.deliver(event);
 
         var inOrder = inOrder(repository, emailService);
-        inOrder.verify(repository).claimDelivery(orderId, NotificationType.NEW_ORDER.name());
+        inOrder.verify(repository).registerIfAbsent(orderId, "NEW_ORDER");
+        inOrder.verify(repository).acquireLease(orderId, "NEW_ORDER", LEASE);
         inOrder.verify(emailService).sendWelcomeEmail(event);
-        inOrder.verify(repository).markDelivered(orderId, NotificationType.NEW_ORDER.name());
+        inOrder.verify(repository).markDelivered(orderId, "NEW_ORDER");
     }
 
     @Test
@@ -82,19 +98,19 @@ class NotificationDeliveryServiceTest {
                 event.orderId(),
                 event.cart(),
                 NotificationType.CANCEL);
-        when(repository.claimDelivery(orderId, NotificationType.CANCEL.name())).thenReturn(1);
+        when(repository.acquireLease(orderId, "CANCEL", LEASE)).thenReturn(1);
 
         deliveryService.deliver(cancellation);
 
         var inOrder = inOrder(repository, emailService);
-        inOrder.verify(repository).claimDelivery(orderId, NotificationType.CANCEL.name());
+        inOrder.verify(repository).acquireLease(orderId, "CANCEL", LEASE);
         inOrder.verify(emailService).sendCancellationEmail(cancellation);
-        inOrder.verify(repository).markDelivered(orderId, NotificationType.CANCEL.name());
+        inOrder.verify(repository).markDelivered(orderId, "CANCEL");
     }
 
     @Test
-    void deliverShouldNotMarkDeliveryWhenEmailFails() {
-        when(repository.claimDelivery(orderId, NotificationType.NEW_ORDER.name())).thenReturn(1);
+    void deliverShouldReleaseLeaseAndRethrowWhenEmailFails() {
+        when(repository.acquireLease(orderId, "NEW_ORDER", LEASE)).thenReturn(1);
         doThrow(new IllegalStateException("SMTP unavailable"))
                 .when(emailService).sendWelcomeEmail(event);
 
@@ -103,8 +119,7 @@ class NotificationDeliveryServiceTest {
                 () -> deliveryService.deliver(event));
 
         assertEquals("SMTP unavailable", exception.getMessage());
-        verify(repository).claimDelivery(orderId, NotificationType.NEW_ORDER.name());
-        verify(repository, never())
-                .markDelivered(orderId, NotificationType.NEW_ORDER.name());
+        verify(repository).releaseLease(orderId, "NEW_ORDER");
+        verify(repository, never()).markDelivered(any(), any());
     }
 }

@@ -124,6 +124,25 @@ class ReservationServiceTest {
     }
 
     @Test
+    void processShouldApplyAnEventOnlyOnceWhenTheOutboxReplaysIt() {
+        OrderEventDTO event = event();
+        when(processedOrderEventRepository.registerIfNotProcessed(event.eventId())).thenReturn(1, 0);
+        when(reservationRepository.findByCartId(cartId)).thenReturn(Optional.empty());
+        when(reservationRepository.save(any(Reservation.class))).thenAnswer(invocation -> {
+            Reservation saved = invocation.getArgument(0);
+            saved.setId(reservationId);
+            return saved;
+        });
+
+        reservationService.process(event);
+        reservationService.process(event);
+
+        verify(processedOrderEventRepository, times(2)).registerIfNotProcessed(event.eventId());
+        verify(reservationRepository, times(1)).findByCartId(cartId);
+        verify(reservationRepository, times(1)).save(any(Reservation.class));
+    }
+
+    @Test
     void processShouldRegisterAndApplyANewEvent() {
         OrderEventDTO event = event();
         when(processedOrderEventRepository.registerIfNotProcessed(event.eventId())).thenReturn(1);
