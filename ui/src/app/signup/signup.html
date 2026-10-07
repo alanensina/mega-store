@@ -1,0 +1,41 @@
+<main class="login-container">
+  <div class="blob blob-1"></div>
+  <div class="blob blob-2"></div>
+
+  <form class="login-card" [formGroup]="form" (ngSubmit)="signUp()" novalidate>
+    <header>
+      <div class="logo" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M6 8h12l-1 11a2 2 0 0 1-2 1.8H9A2 2 0 0 1 7 19L6 8Z" />
+          <path d="M9 8V7a3 3 0 0 1 6 0v1" />
+          <path d="M10 13.5c.6.7 1.2 1 2 1s1.4-.3 2-1" />
+        </svg>
+      </div>
+      <h1>Create account</h1>
+      <p class="subtitle">Join ESN Store in just a few seconds</p>
+    </header>
+
+    <div class="field">
+      <input id="name" type="text" formControlName="name" placeholder=" " autocomplete="name" />
+      <label for="name">Name</label>
+    </div>
+
+    <div class="field">
+      <input id="username" type="text" formControlName="username" placeholder=" " autocomplete="username" />
+      <label for="username">Username</label>
+    </div>
+
+    <div class="field">
+      <input id="password" type="password" formControlName="password" placeholder=" " autocomplete="new-password" />
+      <label for="password">Password</label>
+    </div>
+
+    <div class="field">
+      <input id="email" type="email" formControlName="email" placeholder=" " autocomplete="email" />
+      <label for="email">Email</label>
+    </div>
+
+    <button type="submit" class="primary">Sign up</button>
+    <button type="button" class="secondary" (click)="cancel()">Cancel</button>
+  </form>
+</main>
