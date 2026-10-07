@@ -36,6 +36,8 @@ public class OutboxEvent {
     @Column(nullable = false)
     private int attempts;
 
+    private LocalDateTime nextAttemptAt;
+
     @Column(columnDefinition = "TEXT")
     private String lastError;
 }

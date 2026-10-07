@@ -1,12 +1,20 @@
 package com.alanensina.inventory.configurations;
 
 import org.apache.kafka.clients.consumer.ConsumerConfig;
+import org.apache.kafka.clients.consumer.ConsumerRecord;
+import org.apache.kafka.clients.producer.ProducerConfig;
+import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.common.serialization.StringDeserializer;
+import org.apache.kafka.common.serialization.StringSerializer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.kafka.config.ConcurrentKafkaListenerContainerFactory;
 import org.springframework.kafka.core.ConsumerFactory;
 import org.springframework.kafka.core.DefaultKafkaConsumerFactory;
+import org.springframework.kafka.core.DefaultKafkaProducerFactory;
+import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.kafka.core.ProducerFactory;
+import org.springframework.kafka.listener.DeadLetterPublishingRecoverer;
 import org.springframework.kafka.listener.DefaultErrorHandler;
 import org.springframework.util.backoff.ExponentialBackOff;
 
@@ -30,15 +38,37 @@ public class KafkaConsumerConfig {
         );
     }
 
+    @Bean
+    public ProducerFactory<String, String> producerFactory() {
+        Map<String, Object> props = new HashMap<>();
+        props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9094");
+        props.put(ProducerConfig.ACKS_CONFIG, "all");
+        props.put(ProducerConfig.ENABLE_IDEMPOTENCE_CONFIG, true);
+        return new DefaultKafkaProducerFactory<>(props, new StringSerializer(), new StringSerializer());
+    }
+
+    // Used only to publish records that exhausted their retries to the dead-letter topic.
+    @Bean
+    public KafkaTemplate<String, String> kafkaTemplate() {
+        return new KafkaTemplate<>(producerFactory());
+    }
+
     @Bean(name = "kafkaListenerContainerFactory")
-    public ConcurrentKafkaListenerContainerFactory<String, String> kafkaListenerContainerFactory() {
+    public ConcurrentKafkaListenerContainerFactory<String, String> kafkaListenerContainerFactory(KafkaTemplate<String, String> kafkaTemplate) {
         ConcurrentKafkaListenerContainerFactory<String, String> factory =
                 new ConcurrentKafkaListenerContainerFactory<>();
         factory.setConsumerFactory(consumerFactory());
         // Retries with a growing delay so transient lock conflicts clear up before the record is given up on.
         var backOff = new ExponentialBackOff(500L, 2.0);
         backOff.setMaxElapsedTime(30_000L);
-        factory.setCommonErrorHandler(new DefaultErrorHandler(backOff));
+        // Exhausted records go to <topic>.DLT instead of being dropped; partition -1 lets Kafka pick one.
+        var recoverer = new DeadLetterPublishingRecoverer(kafkaTemplate,
+                KafkaConsumerConfig::deadLetterDestination);
+        factory.setCommonErrorHandler(new DefaultErrorHandler(recoverer, backOff));
         return factory;
+    }
+
+    static TopicPartition deadLetterDestination(ConsumerRecord<?, ?> failedRecord, Exception exception) {
+        return new TopicPartition(failedRecord.topic() + ".DLT", -1);
     }
 }

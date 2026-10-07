@@ -17,6 +17,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -37,7 +38,7 @@ class OutboxPublisherTest {
     void publishMarksEventsAsPublishedAndClearsPreviousError() {
         OutboxEvent event = event();
         event.setLastError("old failure");
-        when(repository.findPendingEventsForPublishing()).thenReturn(List.of(event));
+        when(repository.findPendingEventsForPublishing(any(), anyInt())).thenReturn(List.of(event));
         when(kafkaTemplate.send("orders", "order-key", "payload"))
                 .thenReturn(CompletableFuture.completedFuture(null));
 
@@ -52,7 +53,7 @@ class OutboxPublisherTest {
     void publishRecordsFailuresAndContinuesWithFollowingEvents() {
         OutboxEvent failedEvent = event();
         OutboxEvent succeedingEvent = event();
-        when(repository.findPendingEventsForPublishing())
+        when(repository.findPendingEventsForPublishing(any(), anyInt()))
                 .thenReturn(List.of(failedEvent, succeedingEvent));
         when(kafkaTemplate.send("orders", "order-key", "payload"))
                 .thenReturn(CompletableFuture.failedFuture(new ExecutionException("broker unavailable", null)),
@@ -69,11 +70,42 @@ class OutboxPublisherTest {
     }
 
     @Test
+    void publishSchedulesNextAttemptWithExponentialBackoffAfterFailure() {
+        OutboxEvent event = event();
+        event.setAttempts(2);
+        when(repository.findPendingEventsForPublishing(any(), anyInt())).thenReturn(List.of(event));
+        when(kafkaTemplate.send("orders", "order-key", "payload"))
+                .thenReturn(CompletableFuture.failedFuture(new ExecutionException("down", null)));
+
+        java.time.LocalDateTime before = java.time.LocalDateTime.now();
+        publisher.publishPendingEvents();
+
+        assertEquals(3, event.getAttempts());
+        assertTrue(event.getNextAttemptAt().isAfter(before.plusSeconds(3)));
+        assertTrue(event.getNextAttemptAt().isBefore(before.plusSeconds(6)));
+    }
+
+    @Test
+    void publishGivesUpWhenMaxAttemptsIsReached() {
+        OutboxEvent event = event();
+        event.setAttempts(9);
+        when(repository.findPendingEventsForPublishing(any(), anyInt())).thenReturn(List.of(event));
+        when(kafkaTemplate.send("orders", "order-key", "payload"))
+                .thenReturn(CompletableFuture.failedFuture(new ExecutionException("down", null)));
+
+        publisher.publishPendingEvents();
+
+        assertEquals(10, event.getAttempts());
+        assertNull(event.getNextAttemptAt());
+        assertNull(event.getPublishedAt());
+    }
+
+    @Test
     void publishStopsAfterAnInterruptedSendAndRestoresInterruptStatus() throws Exception {
         OutboxEvent interruptedEvent = event();
         OutboxEvent followingEvent = event();
         CompletableFuture<SendResult<String, String>> future = mock(CompletableFuture.class);
-        when(repository.findPendingEventsForPublishing())
+        when(repository.findPendingEventsForPublishing(any(), anyInt()))
                 .thenReturn(List.of(interruptedEvent, followingEvent));
         when(kafkaTemplate.send("orders", "order-key", "payload")).thenReturn(future);
         when(future.get(10, TimeUnit.SECONDS)).thenThrow(new InterruptedException("interrupted"));
@@ -90,7 +122,7 @@ class OutboxPublisherTest {
 
     @Test
     void publishDoesNothingWhenThereAreNoPendingEvents() {
-        when(repository.findPendingEventsForPublishing()).thenReturn(List.of());
+        when(repository.findPendingEventsForPublishing(any(), anyInt())).thenReturn(List.of());
 
         publisher.publishPendingEvents();
 

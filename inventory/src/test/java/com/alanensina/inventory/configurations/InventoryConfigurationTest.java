@@ -4,9 +4,11 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import org.junit.jupiter.api.Test;
 import org.springframework.kafka.config.ConcurrentKafkaListenerContainerFactory;
 import org.springframework.kafka.core.DefaultKafkaConsumerFactory;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.mock;
 
 class InventoryConfigurationTest {
 
@@ -33,8 +35,19 @@ class InventoryConfigurationTest {
         assertEquals("earliest", properties.get("auto.offset.reset"));
 
         ConcurrentKafkaListenerContainerFactory<String, String> listenerFactory =
-                config.kafkaListenerContainerFactory();
+                config.kafkaListenerContainerFactory(mock(KafkaTemplate.class));
         assertInstanceOf(DefaultKafkaConsumerFactory.class, listenerFactory.getConsumerFactory());
+        assertNotNull(config.kafkaTemplate().getProducerFactory());
+    }
+
+    @Test
+    void deadLetterDestinationAppendsDltSuffixAndLetsKafkaPickThePartition() {
+        var failedRecord = new org.apache.kafka.clients.consumer.ConsumerRecord<>("orders_topic", 3, 0L, "k", "v");
+
+        var destination = KafkaConsumerConfig.deadLetterDestination(failedRecord, new RuntimeException("boom"));
+
+        assertEquals("orders_topic.DLT", destination.topic());
+        assertEquals(-1, destination.partition());
     }
 
     @Test
