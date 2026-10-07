@@ -12,6 +12,8 @@ export class Login {
   private readonly fb = inject(FormBuilder);
   private readonly router = inject(Router);
 
+  protected readonly message: string | undefined = history.state?.message;
+
   protected readonly form = this.fb.nonNullable.group({
     username: ['', Validators.required],
     password: ['', Validators.required],

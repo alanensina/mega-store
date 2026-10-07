@@ -69,7 +69,7 @@ public class SecurityConfig {
                         })
                     .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                     .authorizeHttpRequests(auth -> auth
-                            .requestMatchers("/api/auth", "/api/auth/**", "/v3/api-docs/**", "/swagger-ui/**").permitAll()
+                            .requestMatchers("/api/auth", "/api/auth/**", "/v3/api-docs/**", "/swagger-ui/**", "/error").permitAll()
                             .requestMatchers(HttpMethod.POST, "/api/customer").permitAll()
                             .anyRequest().authenticated()
                     )

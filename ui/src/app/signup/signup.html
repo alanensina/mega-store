@@ -35,7 +35,15 @@
       <label for="email">Email</label>
     </div>
 
-    <button type="submit" class="primary">Sign up</button>
+    @if (errors().length) {
+      <div class="alert alert-error" role="alert">
+        @for (e of errors(); track e) {
+          <div>{{ e }}</div>
+        }
+      </div>
+    }
+
+    <button type="submit" class="primary" [disabled]="submitting()">Sign up</button>
     <button type="button" class="secondary" (click)="cancel()">Cancel</button>
   </form>
 </main>
