@@ -6,7 +6,10 @@ import com.alanensina.inventory.dtos.UpdateProductDTO;
 import com.alanensina.inventory.exceptions.ProductNameAlreadyExistsException;
 import com.alanensina.inventory.exceptions.ProductNotFoundException;
 import com.alanensina.inventory.models.Product;
+import com.alanensina.inventory.models.Stock;
 import com.alanensina.inventory.repositories.ProductRepository;
+import com.alanensina.inventory.repositories.StockRepository;
+import jakarta.transaction.Transactional;
 import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -23,7 +26,9 @@ import java.util.UUID;
 public class ProductService {
 
     private final ProductRepository productRepository;
+    private final StockRepository stockRepository;
 
+    @Transactional
     public ProductDTO create(CreateProductDTO productDTO) {
 
         validateProductName(productDTO.name());
@@ -31,12 +36,20 @@ public class ProductService {
         var now = LocalDateTime.now(ZoneId.systemDefault());
         var newProduct = Product.builder()
                 .name(productDTO.name())
+                .price(productDTO.price())
                 .active(productDTO.active())
                 .createdAt(now)
                 .updatedAt(now)
                 .build();
 
-        newProduct =  productRepository.save(newProduct);
+        newProduct = productRepository.save(newProduct);
+
+        var stock = new Stock();
+        stock.setProduct(newProduct);
+        stock.setQuantity(productDTO.quantity());
+        stock.setCreatedAt(now);
+        stock.setUpdatedAt(now);
+        stockRepository.save(stock);
         log.info("Product with name '" + productDTO.name() + "' has been created");
 
         return toDTO(newProduct);
@@ -69,6 +82,7 @@ public class ProductService {
         var updatedProduct = Product.builder()
                 .id(productDTO.id())
                 .name(productDTO.name())
+                .price(product.price())
                 .active(productDTO.active())
                 .createdAt(product.createdAt())
                 .updatedAt(LocalDateTime.now(ZoneId.systemDefault()))
@@ -91,6 +105,7 @@ public class ProductService {
         return new ProductDTO(
                 product.getId(),
                 product.getName(),
+                product.getPrice(),
                 product.isActive(),
                 product.getCreatedAt(),
                 product.getUpdatedAt()

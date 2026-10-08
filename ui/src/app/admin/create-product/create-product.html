@@ -1,0 +1,39 @@
+<form class="card" [formGroup]="form" (ngSubmit)="create()" novalidate>
+  <h1>Create product</h1>
+
+  <div class="field">
+    <label for="name">Name</label>
+    <input id="name" type="text" formControlName="name" />
+  </div>
+
+  <div class="field">
+    <label for="price">Price</label>
+    <input id="price" type="number" min="0" step="0.01" formControlName="price" />
+  </div>
+
+  <div class="field">
+    <label for="quantity">Quantity</label>
+    <input id="quantity" type="number" min="0" step="1" formControlName="quantity" />
+  </div>
+
+  <label class="check">
+    <input type="checkbox" formControlName="active" /> Active
+  </label>
+
+  @if (errors().length) {
+    <div class="alert error" role="alert">
+      @for (e of errors(); track e) {
+        <div>{{ e }}</div>
+      }
+    </div>
+  }
+  @if (success()) {
+    <div class="alert ok" role="status">Product created</div>
+  }
+
+  <div class="actions">
+    <button type="submit" class="primary" [disabled]="submitting()">Create</button>
+    <button type="button" class="clean" (click)="clean()">Clean</button>
+    <button type="button" class="cancel" (click)="cancel()">Cancel</button>
+  </div>
+</form>

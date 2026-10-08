@@ -1,4 +1,12 @@
 {
+  "/api/product": {
+    "target": "http://localhost:8080",
+    "secure": false
+  },
+  "/api/stock": {
+    "target": "http://localhost:8080",
+    "secure": false
+  },
   "/api": {
     "target": "http://localhost:8081",
     "secure": false

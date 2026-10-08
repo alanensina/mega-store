@@ -7,6 +7,7 @@ import com.alanensina.inventory.services.ReservationService;
 import com.alanensina.inventory.services.StockService;
 import org.junit.jupiter.api.Test;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
@@ -21,9 +22,9 @@ class InventoryControllerTest {
         ProductService service = mock(ProductService.class);
         ProductController controller = new ProductController(service);
         UUID id = UUID.randomUUID();
-        ProductDTO product = new ProductDTO(id, "Keyboard", true, LocalDateTime.now(), LocalDateTime.now());
+        ProductDTO product = new ProductDTO(id, "Keyboard", BigDecimal.TEN, true, LocalDateTime.now(), LocalDateTime.now());
         List<ProductDTO> products = List.of(product);
-        CreateProductDTO create = new CreateProductDTO("Keyboard", true);
+        CreateProductDTO create = new CreateProductDTO("Keyboard", BigDecimal.TEN, true, 5);
         UpdateProductDTO update = new UpdateProductDTO(id, "Keyboard", false);
         when(service.create(create)).thenReturn(product);
         when(service.listAllProducts()).thenReturn(products);

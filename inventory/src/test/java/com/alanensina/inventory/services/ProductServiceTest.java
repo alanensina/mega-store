@@ -6,7 +6,9 @@ import com.alanensina.inventory.dtos.UpdateProductDTO;
 import com.alanensina.inventory.exceptions.ProductNameAlreadyExistsException;
 import com.alanensina.inventory.exceptions.ProductNotFoundException;
 import com.alanensina.inventory.models.Product;
+import com.alanensina.inventory.models.Stock;
 import com.alanensina.inventory.repositories.ProductRepository;
+import com.alanensina.inventory.repositories.StockRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -16,6 +18,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -30,6 +33,9 @@ class ProductServiceTest {
 
     @Mock
     private ProductRepository productRepository;
+
+    @Mock
+    private StockRepository stockRepository;
 
     @InjectMocks
     private ProductService productService;
@@ -47,7 +53,7 @@ class ProductServiceTest {
 
     @Test
     void createShouldSaveAndReturnDto() {
-        CreateProductDTO input = new CreateProductDTO("Keyboard", true);
+        CreateProductDTO input = new CreateProductDTO("Keyboard", BigDecimal.TEN, true, 5);
         Product saved = product("Keyboard", true);
         when(productRepository.existsByNameIgnoreCase("Keyboard")).thenReturn(false);
         when(productRepository.save(any(Product.class))).thenReturn(saved);
@@ -63,16 +69,22 @@ class ProductServiceTest {
         assertEquals("Keyboard", captor.getValue().getName());
         assertNotNull(captor.getValue().getCreatedAt());
         assertNotNull(captor.getValue().getUpdatedAt());
+        assertEquals(BigDecimal.TEN, captor.getValue().getPrice());
+        ArgumentCaptor<Stock> stockCaptor = ArgumentCaptor.forClass(Stock.class);
+        verify(stockRepository).save(stockCaptor.capture());
+        assertEquals(5, stockCaptor.getValue().getQuantity());
+        assertEquals(saved, stockCaptor.getValue().getProduct());
     }
 
     @Test
     void createShouldRejectDuplicateName() {
         when(productRepository.existsByNameIgnoreCase("Keyboard")).thenReturn(true);
 
-        Executable createCall = () -> productService.create(new CreateProductDTO("Keyboard", true));
+        Executable createCall = () -> productService.create(new CreateProductDTO("Keyboard", BigDecimal.TEN, true, 5));
 
         assertThrows(ProductNameAlreadyExistsException.class, createCall);
         verify(productRepository, never()).save(any());
+        verify(stockRepository, never()).save(any());
     }
 
     @Test
@@ -168,6 +180,7 @@ class ProductServiceTest {
         return Product.builder()
                 .id(productId)
                 .name(name)
+                .price(BigDecimal.TEN)
                 .active(active)
                 .createdAt(createdAt)
                 .updatedAt(updatedAt)

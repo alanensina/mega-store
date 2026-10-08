@@ -11,6 +11,7 @@ import com.alanensina.inventory.models.ReservationItem;
 import com.alanensina.inventory.models.Stock;
 import org.junit.jupiter.api.Test;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
@@ -23,8 +24,8 @@ class DomainTypesTest {
     void productDtosExposeValuesAndValueSemantics() {
         UUID id = UUID.randomUUID();
         LocalDateTime now = LocalDateTime.of(2024, 1, 2, 10, 30);
-        var createProduct = new CreateProductDTO("Keyboard", true);
-        var product = new ProductDTO(id, "Keyboard", true, now, now);
+        var createProduct = new CreateProductDTO("Keyboard", BigDecimal.TEN, true, 5);
+        var product = new ProductDTO(id, "Keyboard", BigDecimal.TEN, true, now, now);
         var updateProduct = new UpdateProductDTO(id, "Keyboard", true);
 
         assertAll(
@@ -40,10 +41,10 @@ class DomainTypesTest {
                 () -> assertTrue(updateProduct.active())
         );
 
-        assertEquals(new CreateProductDTO("Keyboard", true), createProduct);
-        assertEquals(createProduct.hashCode(), new CreateProductDTO("Keyboard", true).hashCode());
+        assertEquals(new CreateProductDTO("Keyboard", BigDecimal.TEN, true, 5), createProduct);
+        assertEquals(createProduct.hashCode(), new CreateProductDTO("Keyboard", BigDecimal.TEN, true, 5).hashCode());
         assertNotNull(createProduct.toString());
-        assertEquals(new ProductDTO(id, "Keyboard", true, now, now), product);
+        assertEquals(new ProductDTO(id, "Keyboard", BigDecimal.TEN, true, now, now), product);
         assertNotNull(product.toString());
         assertEquals(new UpdateProductDTO(id, "Keyboard", true), updateProduct);
         assertNotNull(updateProduct.toString());
@@ -150,9 +151,9 @@ class DomainTypesTest {
         UUID id = UUID.randomUUID();
         LocalDateTime now = LocalDateTime.of(2024, 1, 2, 10, 30);
 
-        Product product = Product.builder().id(id).name("Keyboard").active(true)
+        Product product = Product.builder().id(id).name("Keyboard").price(BigDecimal.TEN).active(true)
                 .createdAt(now).updatedAt(now).build();
-        Product sameProduct = new Product(id, "Keyboard", true, now, now);
+        Product sameProduct = new Product(id, "Keyboard", BigDecimal.TEN, true, now, now);
         assertEquals(product, sameProduct);
         assertEquals(product.hashCode(), sameProduct.hashCode());
         assertTrue(product.toString().contains("Keyboard"));

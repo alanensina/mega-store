@@ -1,0 +1,14 @@
+<div class="layout">
+  <aside class="sidebar">
+    <div class="sidebar-top">
+      <div class="brand">ESN Store</div>
+      <p class="welcome">Welcome {{ customer?.name }}</p>
+      <button type="button" class="nav-btn" routerLink="/admin/createProduct" routerLinkActive="active">Product</button>
+      <button type="button" class="nav-btn">User</button>
+    </div>
+    <button type="button" class="nav-btn logout" (click)="logout()">Logout</button>
+  </aside>
+  <section class="content">
+    <router-outlet />
+  </section>
+</div>
