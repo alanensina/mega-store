@@ -9,6 +9,7 @@ public record CustomerDTO(
         String email,
         String username,
         LocalDateTime createdAt,
-        LocalDateTime updatedAt
+        LocalDateTime updatedAt,
+        boolean admin
 ) {
 }

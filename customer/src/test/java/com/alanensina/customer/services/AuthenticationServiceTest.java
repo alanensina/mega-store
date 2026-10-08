@@ -38,9 +38,9 @@ class AuthenticationServiceTest {
         Customer customer = customer();
         CustomerDTO customerDTO = new CustomerDTO(
                 customer.getId(), customer.getName(), customer.getEmail(), customer.getUsername(),
-                customer.getCreatedAt(), customer.getUpdatedAt());
+                customer.getCreatedAt(), customer.getUpdatedAt(), false);
 
-        when(customerService.getCustomerByUsername("alice")).thenReturn(customer);
+        when(customerService.getCustomerByUsernameToAuthentication("alice")).thenReturn(customer);
         when(passwordEncryptionService.matchPassword("Password123", "hashed-password")).thenReturn(true);
         when(customerService.toDTO(customer)).thenReturn(customerDTO);
         when(jwtService.generateToken(customer)).thenReturn("token");
@@ -55,7 +55,7 @@ class AuthenticationServiceTest {
     @Test
     void loginShouldThrowWhenPasswordIsInvalid() {
         LoginDTO login = new LoginDTO("alice", "wrong");
-        when(customerService.getCustomerByUsername("alice")).thenReturn(customer());
+        when(customerService.getCustomerByUsernameToAuthentication("alice")).thenReturn(customer());
         when(passwordEncryptionService.matchPassword("wrong", "hashed-password")).thenReturn(false);
 
         InvalidCredentialsException exception = assertThrows(
@@ -65,6 +65,20 @@ class AuthenticationServiceTest {
         assertEquals("Invalid credentials for username 'alice'", exception.getMessage());
         verify(customerService, never()).toDTO(any());
         verifyNoInteractions(jwtService);
+    }
+
+    @Test
+    void loginShouldThrowWhenCustomerDoesNotExist() {
+        LoginDTO login = new LoginDTO("alice", "Password123");
+        when(customerService.getCustomerByUsernameToAuthentication("alice")).thenReturn(null);
+
+        InvalidCredentialsException exception = assertThrows(
+                InvalidCredentialsException.class,
+                () -> authenticationService.login(login));
+
+        assertEquals("Invalid credentials for username 'alice'", exception.getMessage());
+        verifyNoInteractions(passwordEncryptionService, jwtService);
+        verify(customerService, never()).toDTO(any());
     }
 
     private Customer customer() {

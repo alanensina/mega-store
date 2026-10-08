@@ -29,7 +29,7 @@ class DomainAndConfigurationTest {
         assertEquals("token", new AuthenticationResponse(null, "token").token());
         assertEquals("alice@example.com", new CreateCustomerDTO("Alice", "alice@example.com", "alice", "Password123").email());
         assertEquals(id, new UpdateCustomerDTO(id, "Alice", "alice@example.com", "alice", "Password123").id());
-        assertEquals("Alice", new CustomerDTO(id, "Alice", "alice@example.com", "alice", now, now).name());
+        assertEquals("Alice", new CustomerDTO(id, "Alice", "alice@example.com", "alice", now, now, false).name());
 
         Customer customer = new Customer();
         customer.setId(id);

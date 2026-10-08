@@ -5,7 +5,9 @@ CREATE TABLE CUSTOMER (
     username VARCHAR(50) NOT NULL,
     password VARCHAR(150) NOT NULL,
     created_at TIMESTAMP NOT NULL,
-    updated_at TIMESTAMP NOT NULL
+    updated_at TIMESTAMP NOT NULL,
+    admin BOOLEAN NOT NULL DEFAULT FALSE,
+    version BIGINT NOT NULL DEFAULT 0
     );
 
 CREATE UNIQUE INDEX IF NOT EXISTS uk_customer_email

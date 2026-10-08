@@ -28,7 +28,7 @@ class AuthenticationControllerTest {
     void shouldReturnAuthenticationServiceResult() {
         LoginDTO login = new LoginDTO("alice", "Password123");
         AuthenticationResponse response = new AuthenticationResponse(
-                new CustomerDTO(UUID.randomUUID(), "Alice", "alice@example.com", "alice", null, null),
+                new CustomerDTO(UUID.randomUUID(), "Alice", "alice@example.com", "alice", null, null, false),
                 "token");
         when(authenticationService.login(login)).thenReturn(response);
 

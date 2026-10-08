@@ -31,7 +31,7 @@ class CustomerControllerTest {
     void shouldDelegateCustomerOperations() {
         UUID id = UUID.randomUUID();
         CustomerDTO customer = new CustomerDTO(id, "Alice", "alice@example.com", "alice",
-                LocalDateTime.MIN, LocalDateTime.MAX);
+                LocalDateTime.MIN, LocalDateTime.MAX, false);
         CreateCustomerDTO create = new CreateCustomerDTO("Alice", "alice@example.com", "alice", "Password123");
         UpdateCustomerDTO update = new UpdateCustomerDTO(id, "Alice", "alice@example.com", "alice", "Password123");
 

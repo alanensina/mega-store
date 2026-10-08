@@ -171,6 +171,27 @@ class CustomerServiceTest {
     }
 
     @Test
+    void getCustomerByUsernameToAuthenticationShouldReturnCustomerWhenFound() {
+        Customer customer = buildCustomer("Alice", "alice@email.com", "alice");
+        when(customerRepository.findByUsernameIgnoreCase("alice")).thenReturn(Optional.of(customer));
+
+        Customer result = customerService.getCustomerByUsernameToAuthentication("alice");
+
+        assertSame(customer, result);
+        verify(customerRepository).findByUsernameIgnoreCase("alice");
+    }
+
+    @Test
+    void getCustomerByUsernameToAuthenticationShouldReturnNullWhenCustomerDoesNotExist() {
+        when(customerRepository.findByUsernameIgnoreCase("missing")).thenReturn(Optional.empty());
+
+        Customer result = customerService.getCustomerByUsernameToAuthentication("missing");
+
+        assertNull(result);
+        verify(customerRepository).findByUsernameIgnoreCase("missing");
+    }
+
+    @Test
     void updateShouldUpdateCustomerAndReturnDto() {
         Customer existingCustomer = buildCustomer("Alice", "alice@email.com", "alice");
         UpdateCustomerDTO dto = new UpdateCustomerDTO(customerId, "Alice Updated", "alice.updated@email.com", "aliceupdated", "NewPassword123");

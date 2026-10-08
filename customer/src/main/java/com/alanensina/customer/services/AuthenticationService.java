@@ -1,6 +1,6 @@
 package com.alanensina.customer.services;
 
-import com.alanensina.customer.dtos.CustomerDTO;
+import com.alanensina.customer.dtos.AuthenticationResponse;
 import com.alanensina.customer.dtos.LoginDTO;
 import com.alanensina.customer.exceptions.InvalidCredentialsException;
 import com.alanensina.customer.models.Customer;
@@ -18,13 +18,18 @@ public class AuthenticationService {
     private final CustomerService customerService;
     private final JwtService jwtService;
 
-    public com.alanensina.customer.dtos.AuthenticationResponse login(@Valid LoginDTO loginDTO) {
-        var customer = customerService.getCustomerByUsername(loginDTO.username());
+    public AuthenticationResponse login(@Valid LoginDTO loginDTO) {
+        var customer = customerService.getCustomerByUsernameToAuthentication(loginDTO.username());
+
+        if(customer == null) {
+            log.warn("Invalid login attempt for username: {}", loginDTO.username());
+            throw new InvalidCredentialsException(loginDTO.username());
+        }
 
         if (validatePassword(loginDTO, customer)) {
             var dto = customerService.toDTO(customer);
             var token = jwtService.generateToken(customer);
-            return new com.alanensina.customer.dtos.AuthenticationResponse(dto, token);
+            return new AuthenticationResponse(dto, token);
         }
 
         log.warn("Invalid login attempt for username: {}", loginDTO.username());

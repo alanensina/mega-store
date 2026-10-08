@@ -34,5 +34,6 @@ public class Customer {
     private String password;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    private boolean admin;
 
 }

@@ -68,6 +68,11 @@ public class CustomerService {
                 .orElseThrow(() -> new CustomerNotFoundException(username));
     }
 
+    public Customer getCustomerByUsernameToAuthentication(String username) {
+        var customer = customerRepository.findByUsernameIgnoreCase(username);
+        return customer.orElse(null);
+    }
+
     public CustomerDTO update(@Valid UpdateCustomerDTO customerDTO) {
         var oldCustomer = customerRepository.findById(customerDTO.id())
                 .orElseThrow(() -> new CustomerNotFoundException(customerDTO.id()));
@@ -101,7 +106,8 @@ public class CustomerService {
                 savedCustomer.getEmail(),
                 savedCustomer.getUsername(),
                 savedCustomer.getCreatedAt(),
-                savedCustomer.getUpdatedAt()
+                savedCustomer.getUpdatedAt(),
+                savedCustomer.isAdmin()
         );
     }
 
