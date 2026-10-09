@@ -1,0 +1,54 @@
+<div class="card">
+  <div class="header">
+    <h1>Users</h1>
+    <button type="button" class="add" title="New" aria-label="New user" (click)="create()">+</button>
+  </div>
+
+  @if (error()) {
+    <div class="alert error" role="alert">{{ error() }}</div>
+  }
+
+  <table>
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Email</th>
+        <th>Username</th>
+        <th>Admin</th>
+        <th class="actions-col"></th>
+      </tr>
+    </thead>
+    <tbody>
+      @for (u of users(); track u.id) {
+        <tr>
+          <td>{{ u.name }}</td>
+          <td>{{ u.email }}</td>
+          <td>{{ u.username }}</td>
+          <td>{{ u.admin ? 'Yes' : 'No' }}</td>
+          <td class="actions-col">
+            <button type="button" class="icon" title="Edit" aria-label="Edit {{ u.name }}" (click)="edit(u)">✏️</button>
+            @if (u.id !== currentId) {
+              <button type="button" class="icon" title="Delete" aria-label="Delete {{ u.name }}" (click)="askDelete(u)">🗑️</button>
+            }
+          </td>
+        </tr>
+      } @empty {
+        <tr>
+          <td colspan="5" class="empty">{{ loading() ? 'Loading...' : 'No users found.' }}</td>
+        </tr>
+      }
+    </tbody>
+  </table>
+</div>
+
+@if (pendingDelete(); as item) {
+  <div class="backdrop" (click)="cancelDelete()">
+    <div class="dialog" role="alertdialog" aria-modal="true" (click)="$event.stopPropagation()">
+      <p>Delete <strong>{{ item.name }}</strong>?</p>
+      <div class="dialog-actions">
+        <button type="button" class="danger" [disabled]="deleting()" (click)="confirmDelete()">Delete</button>
+        <button type="button" [disabled]="deleting()" (click)="cancelDelete()">Cancel</button>
+      </div>
+    </div>
+  </div>
+}

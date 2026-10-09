@@ -1,0 +1,156 @@
+:host {
+  display: block;
+  width: 100%;
+  max-width: 900px;
+  color: var(--text);
+}
+
+.card {
+  padding: 1.5rem;
+  background: var(--side);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+}
+
+h1 {
+  margin: 0;
+  font-size: 1.4rem;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th,
+td {
+  padding: 0.6rem 0.5rem;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+}
+
+.actions-col {
+  width: 90px;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.empty {
+  text-align: center;
+  color: var(--muted);
+}
+
+button {
+  padding: 0.5rem 1rem;
+  font: inherit;
+  font-weight: 600;
+  color: var(--text);
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+button.icon {
+  padding: 0.2rem 0.4rem;
+  border: none;
+}
+
+button.add {
+  color: var(--nav-text);
+  border-color: var(--nav-border);
+  background: var(--nav-bg);
+}
+
+button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.alert.error {
+  margin-bottom: 1rem;
+  padding: 0.6rem 0.8rem;
+  border-radius: 10px;
+  font-size: 0.875rem;
+  color: #b91c1c;
+  background: rgba(239, 68, 68, 0.12);
+}
+
+.backdrop {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.4);
+  z-index: 10;
+}
+
+.dialog {
+  min-width: 260px;
+  padding: 1.25rem;
+  background: var(--side);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  text-align: center;
+}
+
+.dialog p {
+  margin: 0 0 1rem;
+}
+
+.dialog-actions {
+  display: flex;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+button.danger {
+  color: #fff;
+  background: #dc2626;
+  border-color: #dc2626;
+}
+
+tbody tr.clickable {
+  cursor: pointer;
+}
+
+tbody tr.clickable:hover {
+  background: rgba(127, 127, 127, 0.1);
+}
+
+.dialog.details {
+  min-width: 380px;
+  text-align: left;
+}
+
+.dialog.details h2 {
+  margin: 0 0 1rem;
+  font-size: 1.1rem;
+}
+
+.num {
+  text-align: right;
+}
+
+.dialog.details .dialog-actions {
+  margin-top: 1.5rem;
+  justify-content: center;
+}
+
+.dialog.details .dialog-actions button {
+  color: var(--logout-text);
+  background: var(--logout-bg);
+  border-color: var(--logout-border);
+}
+
+.dialog.details .dialog-actions button:hover {
+  background: var(--logout-hover);
+}

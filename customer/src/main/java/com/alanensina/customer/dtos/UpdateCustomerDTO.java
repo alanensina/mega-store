@@ -12,7 +12,6 @@ public record UpdateCustomerDTO(
         @NotBlank(message = "Name is mandatory") String name,
         @Email(message = "Email is mandatory") String email,
         @NotBlank(message = "Username is mandatory") String username,
-        @NotBlank(message = "Password is mandatory")
         @Size(min = 8, max = 16, message = "Password must be between 8 and 16 characters")
         String password
 ) {

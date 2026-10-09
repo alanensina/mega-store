@@ -1,18 +1,61 @@
-<main class="login-container">
+<main class="store">
   <div class="blob blob-1"></div>
   <div class="blob blob-2"></div>
-
-  <section class="login-card">
-    <header>
-      <div class="logo" aria-hidden="true">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M6 8h12l-1 11a2 2 0 0 1-2 1.8H9A2 2 0 0 1 7 19L6 8Z" />
-          <path d="M9 8V7a3 3 0 0 1 6 0v1" />
-          <path d="M10 13.5c.6.7 1.2 1 2 1s1.4-.3 2-1" />
-        </svg>
-      </div>
+  <header class="topbar">
+    <div>
       <h1>ESN Store</h1>
       <p class="subtitle">Welcome {{ customer?.name }}</p>
-    </header>
+    </div>
+    <div class="actions">
+      <button type="button" class="cart-btn" aria-label="Open cart" (click)="openCart()">
+        🛒 Cart
+        @if (cart.count() > 0) {
+          <span class="badge">{{ cart.count() }}</span>
+        }
+      </button>
+      <button type="button" class="logout-btn" aria-label="Log out" (click)="logout()">Logout</button>
+      @if (added()) {
+        <div class="toast" role="status">{{ added() }} added to cart</div>
+      }
+    </div>
+  </header>
+
+  @if (error()) {
+    <div class="alert" role="alert">{{ error() }}</div>
+  }
+
+  @if (loading()) {
+    <p class="empty">Loading...</p>
+  } @else if (products().length === 0 && !error()) {
+    <p class="empty">No products available.</p>
+  }
+
+  <section class="grid">
+    @for (p of products(); track p.id) {
+      <article class="product">
+        <div class="image-placeholder" aria-hidden="true"></div>
+        <h2>{{ p.name }}</h2>
+        <p class="price">{{ p.price | currency }}</p>
+        <div class="buy">
+          <input
+            type="number"
+            min="1"
+            step="1"
+            [attr.aria-label]="'Quantity of ' + p.name"
+            [value]="quantity(p.id)"
+            (change)="setQuantity(p.id, +$any($event.target).value)"
+          />
+          <button
+            type="button"
+            class="add-btn"
+            title="Add to cart"
+            [attr.aria-label]="'Add ' + p.name + ' to cart'"
+            (click)="addToCart(p)"
+          >
+            +
+          </button>
+        </div>
+      </article>
+    }
   </section>
 </main>

@@ -3,8 +3,9 @@
     <div class="sidebar-top">
       <div class="brand">ESN Store</div>
       <p class="welcome">Welcome {{ customer?.name }}</p>
-      <button type="button" class="nav-btn" routerLink="/admin/createProduct" routerLinkActive="active">Product</button>
-      <button type="button" class="nav-btn">User</button>
+      <button type="button" class="nav-btn" routerLink="/admin/products" routerLinkActive="active">Products</button>
+      <button type="button" class="nav-btn" routerLink="/admin/users" routerLinkActive="active">Users</button>
+      <button type="button" class="nav-btn" routerLink="/admin/orders" routerLinkActive="active">Orders</button>
     </div>
     <button type="button" class="nav-btn logout" (click)="logout()">Logout</button>
   </aside>

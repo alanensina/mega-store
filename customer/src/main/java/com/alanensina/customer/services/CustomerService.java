@@ -84,12 +84,13 @@ public class CustomerService {
         }
 
         var now = LocalDateTime.now(ZoneId.systemDefault());
-        var encryptedPassword = passwordEncryptionService.encryptPassword(customerDTO.password());
 
         oldCustomer.setName(customerDTO.name());
         oldCustomer.setEmail(customerDTO.email());
         oldCustomer.setUsername(customerDTO.username());
-        oldCustomer.setPassword(encryptedPassword);
+        if (customerDTO.password() != null) {
+            oldCustomer.setPassword(passwordEncryptionService.encryptPassword(customerDTO.password()));
+        }
         oldCustomer.setUpdatedAt(now);
 
         customerRepository.save(oldCustomer);

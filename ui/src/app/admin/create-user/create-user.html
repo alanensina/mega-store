@@ -1,0 +1,42 @@
+<form class="card" [formGroup]="form" (ngSubmit)="save()" novalidate>
+  <h1>{{ editingId() ? 'Update user' : 'Create user' }}</h1>
+
+  <div class="field">
+    <label for="name">Name</label>
+    <input id="name" type="text" formControlName="name" />
+  </div>
+
+  <div class="field">
+    <label for="email">Email</label>
+    <input id="email" type="email" formControlName="email" />
+  </div>
+
+  <div class="field">
+    <label for="username">Username</label>
+    <input id="username" type="text" formControlName="username" />
+  </div>
+
+  <div class="field">
+    <label for="password">Password{{ editingId() ? ' (leave blank to keep current)' : '' }}</label>
+    <input id="password" type="password" autocomplete="new-password" formControlName="password" />
+  </div>
+
+  @if (errors().length) {
+    <div class="alert error" role="alert">
+      @for (e of errors(); track e) {
+        <div>{{ e }}</div>
+      }
+    </div>
+  }
+  @if (success()) {
+    <div class="alert ok" role="status">User created</div>
+  }
+
+  <div class="actions">
+    <button type="submit" class="primary" [disabled]="submitting()">{{ editingId() ? 'Update' : 'Create' }}</button>
+    @if (!editingId()) {
+      <button type="button" class="clean" (click)="clean()">Clean</button>
+    }
+    <button type="button" class="cancel" (click)="cancel()">Cancel</button>
+  </div>
+</form>

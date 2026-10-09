@@ -1,0 +1,63 @@
+<div class="card">
+  <div class="header">
+    <h1>Orders</h1>
+  </div>
+
+  @if (error()) {
+    <div class="alert error" role="alert">{{ error() }}</div>
+  }
+
+  <table>
+    <thead>
+      <tr>
+        <th>Order ID</th>
+        <th>Items</th>
+        <th>Status</th>
+        <th class="num">Total</th>
+      </tr>
+    </thead>
+    <tbody>
+      @for (o of orders(); track o.id) {
+        <tr class="clickable" (click)="open(o)">
+          <td>{{ o.id }}</td>
+          <td>{{ itemCount(o) }}</td>
+          <td>{{ o.status }}</td>
+          <td class="num">{{ o.totalPrice | currency }}</td>
+        </tr>
+      } @empty {
+        <tr>
+          <td colspan="4" class="empty">{{ loading() ? 'Loading...' : 'No orders found.' }}</td>
+        </tr>
+      }
+    </tbody>
+  </table>
+</div>
+
+@if (selected(); as order) {
+  <div class="backdrop" (click)="close()">
+    <div class="dialog details" role="dialog" aria-modal="true" (click)="$event.stopPropagation()">
+      <h2>Order {{ order.id }}</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Item</th>
+            <th class="num">Qty</th>
+            <th class="num">Unit price</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (i of order.items; track i.productId) {
+            <tr>
+              <td>{{ nameOf(i.productId) }}</td>
+              <td class="num">{{ i.quantity }}</td>
+              <td class="num">{{ i.price | currency }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+      <div class="dialog-actions">
+        <button type="button" (click)="close()">Close</button>
+      </div>
+    </div>
+  </div>
+}

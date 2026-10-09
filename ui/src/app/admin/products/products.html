@@ -1,0 +1,52 @@
+<div class="card">
+  <div class="header">
+    <h1>Products</h1>
+    <button type="button" class="add" title="New" aria-label="New product" (click)="create()">+</button>
+  </div>
+
+  @if (error()) {
+    <div class="alert error" role="alert">{{ error() }}</div>
+  }
+
+  <table>
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Price</th>
+        <th>Quantity</th>
+        <th>Active</th>
+        <th class="actions-col"></th>
+      </tr>
+    </thead>
+    <tbody>
+      @for (p of products(); track p.id) {
+        <tr>
+          <td>{{ p.name }}</td>
+          <td>{{ p.price | currency }}</td>
+          <td>{{ p.quantity ?? '-' }}</td>
+          <td>{{ p.active ? 'Yes' : 'No' }}</td>
+          <td class="actions-col">
+            <button type="button" class="icon" title="Edit" aria-label="Edit {{ p.name }}" (click)="edit(p)">✏️</button>
+            <button type="button" class="icon" title="Delete" aria-label="Delete {{ p.name }}" (click)="askDelete(p)">🗑️</button>
+          </td>
+        </tr>
+      } @empty {
+        <tr>
+          <td colspan="5" class="empty">{{ loading() ? 'Loading...' : 'No products found.' }}</td>
+        </tr>
+      }
+    </tbody>
+  </table>
+</div>
+
+@if (pendingDelete(); as item) {
+  <div class="backdrop" (click)="cancelDelete()">
+    <div class="dialog" role="alertdialog" aria-modal="true" (click)="$event.stopPropagation()">
+      <p>Delete <strong>{{ item.name }}</strong>?</p>
+      <div class="dialog-actions">
+        <button type="button" class="danger" [disabled]="deleting()" (click)="confirmDelete()">Delete</button>
+        <button type="button" [disabled]="deleting()" (click)="cancelDelete()">Cancel</button>
+      </div>
+    </div>
+  </div>
+}

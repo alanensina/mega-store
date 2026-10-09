@@ -73,16 +73,19 @@ public class ProductService {
                 .orElseThrow(() -> new ProductNotFoundException(id));
     }
 
+    @Transactional
     public ProductDTO updateProduct(@Valid UpdateProductDTO productDTO) {
 
         var product = getProductDTOById(productDTO.id());
 
-        validateProductName(productDTO.name());
+        if (!product.name().equalsIgnoreCase(productDTO.name())) {
+            validateProductName(productDTO.name());
+        }
 
         var updatedProduct = Product.builder()
                 .id(productDTO.id())
                 .name(productDTO.name())
-                .price(product.price())
+                .price(productDTO.price() != null ? productDTO.price() : product.price())
                 .active(productDTO.active())
                 .createdAt(product.createdAt())
                 .updatedAt(LocalDateTime.now(ZoneId.systemDefault()))
@@ -90,12 +93,22 @@ public class ProductService {
 
         productRepository.save(updatedProduct);
 
+        if (productDTO.quantity() != null) {
+            stockRepository.findByProductId(productDTO.id()).ifPresent(stock -> {
+                stock.setQuantity(productDTO.quantity());
+                stock.setUpdatedAt(LocalDateTime.now(ZoneId.systemDefault()));
+                stockRepository.save(stock);
+            });
+        }
+
         log.info("Product with id '" + productDTO.id() + "' has been updated");
         return toDTO(updatedProduct);
     }
 
+    @Transactional
     public ProductDTO deleteById(UUID id) {
         var product = getProductDTOById(id);
+        stockRepository.findByProductId(id).ifPresent(stockRepository::delete);
         productRepository.deleteById(id);
         log.info("Product with id '" + id + "' has been deleted");
         return product;

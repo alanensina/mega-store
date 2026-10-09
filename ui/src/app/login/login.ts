@@ -2,7 +2,8 @@ import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Component, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
-import { SessionCustomer, saveSession } from '../session';
+import { CartService } from '../cart.service';
+import { SessionCustomer, clearSession, saveSession } from '../session';
 
 @Component({
   selector: 'app-login',
@@ -14,6 +15,7 @@ export class Login {
   private readonly fb = inject(FormBuilder);
   private readonly router = inject(Router);
   private readonly http = inject(HttpClient);
+  private readonly cart = inject(CartService);
 
   protected readonly message: string | undefined = history.state?.message;
   protected readonly error = signal<string | null>(null);
@@ -23,6 +25,11 @@ export class Login {
     username: ['', Validators.required],
     password: ['', Validators.required],
   });
+
+  constructor() {
+    clearSession();
+    this.cart.clear();
+  }
 
   protected login(): void {
     if (this.form.invalid) {

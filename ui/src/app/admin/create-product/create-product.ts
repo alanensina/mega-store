@@ -1,7 +1,7 @@
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Component, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 
 @Component({
   selector: 'app-create-product',
@@ -14,6 +14,9 @@ export class CreateProduct {
   private readonly router = inject(Router);
   private readonly http = inject(HttpClient);
 
+  private readonly route = inject(ActivatedRoute);
+
+  protected readonly editingId = signal<string | null>(null);
   protected readonly submitting = signal(false);
   protected readonly success = signal(false);
   protected readonly errors = signal<string[]>([]);
@@ -24,6 +27,27 @@ export class CreateProduct {
     active: [true],
     quantity: [null as number | null],
   });
+
+  constructor() {
+    const id = this.route.snapshot.paramMap.get('id');
+    if (id) this.load(id);
+  }
+
+  private load(id: string): void {
+    this.editingId.set(id);
+    this.http.get<{ id: string; name: string; price: number; active: boolean }>(`/api/product/${id}`).subscribe({
+      next: (p) => {
+        this.form.patchValue({ name: p.name, price: p.price, active: p.active });
+        this.http.get<{ product: { id: string }; quantity: number }[]>('/api/stock').subscribe({
+          next: (stocks) => {
+            const stock = stocks.find((s) => s.product.id === id);
+            this.form.patchValue({ quantity: stock ? stock.quantity : null });
+          },
+        });
+      },
+      error: (err: HttpErrorResponse) => this.errors.set([this.extractMessage(err)]),
+    });
+  }
 
   protected create(): void {
     const { name, price, active, quantity } = this.form.getRawValue();
@@ -40,9 +64,17 @@ export class CreateProduct {
     if (errors.length) return;
 
     this.submitting.set(true);
-    this.http.post('/api/product', { name: name.trim(), price, active, quantity }).subscribe({
+    const id = this.editingId();
+    const request = id
+      ? this.http.put('/api/product', { id, name: name.trim(), price, active, quantity })
+      : this.http.post('/api/product', { name: name.trim(), price, active, quantity });
+    request.subscribe({
       next: () => {
         this.submitting.set(false);
+        if (id) {
+          this.router.navigate(['/admin/products']);
+          return;
+        }
         this.clean();
         this.success.set(true);
       },
@@ -60,7 +92,7 @@ export class CreateProduct {
   }
 
   protected cancel(): void {
-    this.router.navigate(['/admin']);
+    this.router.navigate([this.editingId() ? '/admin/products' : '/admin']);
   }
 
   private extractMessage(err: HttpErrorResponse): string {
@@ -68,6 +100,6 @@ export class CreateProduct {
     const body = err.error;
     if (typeof body === 'string' && body) return body;
     if (body?.message) return body.message;
-    return 'Could not create the product.';
+    return 'Could not save the product.';
   }
 }

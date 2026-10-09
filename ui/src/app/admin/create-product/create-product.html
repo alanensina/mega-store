@@ -1,5 +1,5 @@
 <form class="card" [formGroup]="form" (ngSubmit)="create()" novalidate>
-  <h1>Create product</h1>
+  <h1>{{ editingId() ? 'Update product' : 'Create product' }}</h1>
 
   <div class="field">
     <label for="name">Name</label>
@@ -32,8 +32,10 @@
   }
 
   <div class="actions">
-    <button type="submit" class="primary" [disabled]="submitting()">Create</button>
-    <button type="button" class="clean" (click)="clean()">Clean</button>
+    <button type="submit" class="primary" [disabled]="submitting()">{{ editingId() ? 'Update' : 'Create' }}</button>
+    @if (!editingId()) {
+      <button type="button" class="clean" (click)="clean()">Clean</button>
+    }
     <button type="button" class="cancel" (click)="cancel()">Cancel</button>
   </div>
 </form>
