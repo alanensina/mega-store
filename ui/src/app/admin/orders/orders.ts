@@ -1,6 +1,6 @@
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Component, inject, signal } from '@angular/core';
-import { CurrencyPipe } from '@angular/common';
+import { CurrencyPipe, DatePipe } from '@angular/common';
 
 interface OrderItem {
   productId: string;
@@ -10,14 +10,16 @@ interface OrderItem {
 
 interface OrderRow {
   id: string;
+  orderNumber: number;
   totalPrice: number;
   status: string;
+  createdAt: string;
   items: OrderItem[];
 }
 
 @Component({
   selector: 'app-orders',
-  imports: [CurrencyPipe],
+  imports: [CurrencyPipe, DatePipe],
   templateUrl: './orders.html',
   styleUrl: './orders.css',
 })

@@ -67,6 +67,10 @@ export class Home {
     this.router.navigate(['/cart']);
   }
 
+  protected openMyOrders(): void {
+    this.router.navigate(['/myOrders']);
+  }
+
   protected logout(): void {
     this.cart.clear();
     clearSession();

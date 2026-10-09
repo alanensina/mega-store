@@ -1,0 +1,288 @@
+:host {
+  --bg: #f5f6fb;
+  --card: rgba(255, 255, 255, 0.7);
+  --card-border: rgba(255, 255, 255, 0.9);
+  --side: #ffffff;
+  --text: #0f172a;
+  --muted: #64748b;
+  --border: #e2e8f0;
+  --accent: #6366f1;
+  --logout-text: #dc2626;
+  --logout-bg: rgba(239, 68, 68, 0.14);
+  --logout-border: rgba(239, 68, 68, 0.3);
+  --logout-hover: rgba(239, 68, 68, 0.22);
+  display: block;
+}
+
+@media (prefers-color-scheme: dark) {
+  :host {
+    --bg: #0b0d17;
+    --card: rgba(30, 33, 52, 0.6);
+    --card-border: rgba(255, 255, 255, 0.08);
+    --side: #151827;
+    --text: #f1f5f9;
+    --muted: #94a3b8;
+    --border: rgba(255, 255, 255, 0.12);
+    --logout-text: #fca5a5;
+    --logout-bg: rgba(248, 113, 113, 0.16);
+    --logout-border: rgba(248, 113, 113, 0.3);
+    --logout-hover: rgba(248, 113, 113, 0.25);
+  }
+}
+
+.store {
+  position: relative;
+  overflow: hidden;
+  min-height: 100vh;
+  padding: 1.5rem;
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Inter', system-ui, sans-serif;
+}
+
+.store > :not(.blob) {
+  position: relative;
+  z-index: 1;
+}
+
+.blob {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(90px);
+  opacity: 0.55;
+  animation: float 14s ease-in-out infinite alternate;
+}
+
+.blob-1 {
+  width: 420px;
+  height: 420px;
+  background: var(--accent);
+  top: -120px;
+  left: -100px;
+}
+
+.blob-2 {
+  width: 380px;
+  height: 380px;
+  background: #ec4899;
+  bottom: -120px;
+  right: -80px;
+  animation-delay: -6s;
+}
+
+@keyframes float {
+  to {
+    transform: translate(40px, 30px) scale(1.1);
+  }
+}
+
+.card {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 1.5rem;
+  background: var(--card);
+  border: 1px solid var(--card-border);
+  border-radius: 16px;
+  backdrop-filter: blur(12px);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+}
+
+h1 {
+  margin: 0;
+  font-size: 1.4rem;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th,
+td {
+  padding: 0.6rem 0.5rem;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+}
+
+.actions-col {
+  width: 90px;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.empty {
+  text-align: center;
+  color: var(--muted);
+}
+
+button {
+  padding: 0.5rem 1rem;
+  font: inherit;
+  font-weight: 600;
+  color: var(--text);
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+button.icon {
+  padding: 0.2rem 0.4rem;
+  border: none;
+}
+
+button.add {
+  color: var(--nav-text);
+  border-color: var(--nav-border);
+  background: var(--nav-bg);
+}
+
+button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.alert.error {
+  margin-bottom: 1rem;
+  padding: 0.6rem 0.8rem;
+  border-radius: 10px;
+  font-size: 0.875rem;
+  color: #b91c1c;
+  background: rgba(239, 68, 68, 0.12);
+}
+
+.backdrop {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.4);
+  z-index: 10;
+}
+
+.dialog {
+  min-width: 260px;
+  padding: 1.25rem;
+  background: #0b1628;
+  color: #f1f5f9;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 14px;
+  text-align: center;
+}
+
+.dialog p {
+  margin: 0 0 1rem;
+}
+
+.dialog-actions {
+  display: flex;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+button.danger {
+  color: #fff;
+  background: #dc2626;
+  border-color: #dc2626;
+}
+
+tbody tr.clickable {
+  cursor: pointer;
+}
+
+tbody tr.clickable:hover {
+  background: rgba(127, 127, 127, 0.1);
+}
+
+.dialog th,
+.dialog td {
+  border-bottom-color: rgba(255, 255, 255, 0.12);
+}
+
+@media (prefers-color-scheme: dark) {
+  .dialog {
+    background: #070d18;
+  }
+}
+
+.dialog.details {
+  min-width: 380px;
+  text-align: left;
+}
+
+.dialog.details h2 {
+  margin: 0 0 1rem;
+  font-size: 1.1rem;
+}
+
+.num {
+  text-align: right;
+}
+
+.dialog.details .dialog-actions {
+  margin-top: 1.5rem;
+  justify-content: center;
+}
+
+.dialog.details .dialog-actions button {
+  color: var(--logout-text);
+  background: var(--logout-bg);
+  border-color: var(--logout-border);
+}
+
+.dialog.details .dialog-actions button:hover {
+  background: var(--logout-hover);
+}
+
+button.back-btn {
+  display: grid;
+  place-items: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  padding: 0;
+  border-radius: 50%;
+  font-size: 1.2rem;
+  line-height: 1;
+  color: #4f46e5;
+  background: rgba(99, 102, 241, 0.14);
+  border: 1px solid rgba(99, 102, 241, 0.3);
+}
+
+button.back-btn:hover {
+  background: rgba(99, 102, 241, 0.22);
+}
+
+@media (prefers-color-scheme: dark) {
+  button.back-btn {
+    color: #a5b4fc;
+    background: rgba(129, 140, 248, 0.16);
+    border-color: rgba(129, 140, 248, 0.3);
+  }
+}
+
+.dialog.details .dialog-actions .cancel-btn {
+  color: var(--logout-text);
+  background: var(--logout-bg);
+  border-color: var(--logout-border);
+}
+
+.dialog.details .dialog-actions .cancel-btn:hover {
+  background: var(--logout-hover);
+}
+
+.dialog.details .dialog-actions button:not(.cancel-btn) {
+  color: #7dd3fc;
+  background: rgba(56, 189, 248, 0.16);
+  border-color: rgba(56, 189, 248, 0.3);
+}
+
+.dialog.details .dialog-actions button:not(.cancel-btn):hover {
+  background: rgba(56, 189, 248, 0.25);
+}

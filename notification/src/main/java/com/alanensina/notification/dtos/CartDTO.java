@@ -9,6 +9,7 @@ import java.util.UUID;
 
 public record CartDTO(
         UUID id,
+        Long orderNumber,
         UUID customerId,
         BigDecimal totalPrice,
         ReservationStatus status,

@@ -6,6 +6,8 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.Generated;
+import org.hibernate.generator.EventType;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -26,6 +28,11 @@ public class Cart {
 
     @Version
     private long version;
+
+    // Assigned by the database sequence (atomic under concurrency, never reused)
+    @Generated(event = EventType.INSERT)
+    @Column(name = "order_number", insertable = false, updatable = false)
+    private Long orderNumber;
 
     private UUID customerId;
     private BigDecimal totalPrice;

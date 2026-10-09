@@ -53,11 +53,11 @@ public class EmailService {
     }
 
     private static @NonNull String getNewOrderSubject(NotificationDTO event) {
-        return "New order placed: ID" + event.cart().id();
+        return "New order placed: #" + event.cart().orderNumber();
     }
 
     private static @NonNull String getCancellationSubject(NotificationDTO event) {
-        return "Order cancelled: ID" + event.cart().id();
+        return "Order cancelled: #" + event.cart().orderNumber();
     }
 
     private String getNewOrderTextMessage(NotificationDTO event) {
@@ -68,7 +68,7 @@ public class EmailService {
 
         StringBuilder message = new StringBuilder(header);
         message.append("\n");
-        message.append("Order ID: ").append(event.cart().id()).append("\n");
+        message.append("Order number: ").append(event.cart().orderNumber()).append("\n");
         message.append("Total price: ").append(event.cart().totalPrice()).append("€").append("\n");
         message.append("Thank you!");
         return message.toString();
@@ -82,7 +82,7 @@ public class EmailService {
 
         StringBuilder message = new StringBuilder(header);
         message.append("\n");
-        message.append("Order ID: ").append(event.cart().id()).append("\n");
+        message.append("Order number: ").append(event.cart().orderNumber()).append("\n");
         message.append("Thank you!");
         return message.toString();
     }

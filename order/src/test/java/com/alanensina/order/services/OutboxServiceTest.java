@@ -71,7 +71,7 @@ class OutboxServiceTest {
                 "Alice",
                 "alice@example.com",
                 orderId,
-                new CartDTO(orderId, UUID.randomUUID(), BigDecimal.TEN,
+                new CartDTO(orderId, 1L, UUID.randomUUID(), BigDecimal.TEN,
                         ReservationStatus.PAID, null, null, List.of()),
                 NotificationType.NEW_ORDER);
         when(objectMapper.writeValueAsString(event)).thenReturn("{\"event\":\"notification\"}");

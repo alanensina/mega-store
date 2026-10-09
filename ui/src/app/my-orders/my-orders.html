@@ -1,0 +1,81 @@
+<main class="store">
+  <div class="blob blob-1"></div>
+  <div class="blob blob-2"></div>
+  <div class="card">
+    <div class="header">
+      <h1>My orders</h1>
+      <button type="button" class="back-btn" aria-label="Back" title="Back" (click)="back()">←</button>
+    </div>
+
+    @if (error()) {
+      <div class="alert error" role="alert">{{ error() }}</div>
+    }
+
+    <table>
+      <thead>
+        <tr>
+          <th>Order #</th>
+          <th>Items</th>
+          <th>Date</th>
+          <th>Status</th>
+          <th class="num">Total</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (o of orders(); track o.id) {
+          <tr class="clickable" (click)="open(o)">
+            <td>{{ o.orderNumber }}</td>
+            <td>{{ itemCount(o) }}</td>
+            <td>{{ o.createdAt | date: 'short' }}</td>
+            <td>{{ o.status }}</td>
+            <td class="num">{{ o.totalPrice | currency }}</td>
+          </tr>
+        } @empty {
+          <tr>
+            <td colspan="5" class="empty">{{ loading() ? 'Loading...' : 'No orders found.' }}</td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+</main>
+
+@if (selected(); as order) {
+  <div class="backdrop" (click)="close()">
+    <div class="dialog details" role="dialog" aria-modal="true" (click)="$event.stopPropagation()">
+      <h2>Order #{{ order.orderNumber }}</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Item</th>
+            <th class="num">Qty</th>
+            <th class="num">Unit price</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (i of order.items; track i.productId) {
+            <tr>
+              <td>{{ nameOf(i.productId) }}</td>
+              <td class="num">{{ i.quantity }}</td>
+              <td class="num">{{ i.price | currency }}</td>
+            </tr>
+          }
+        </tbody>
+        <tfoot>
+          <tr>
+            <th colspan="2">Total</th>
+            <th class="num">{{ order.totalPrice | currency }}</th>
+          </tr>
+        </tfoot>
+      </table>
+      <div class="dialog-actions">
+        @if (canCancel(order)) {
+          <button type="button" class="cancel-btn" [disabled]="cancelling()" (click)="cancel(order)">
+            Cancel order
+          </button>
+        }
+        <button type="button" (click)="close()">Close</button>
+      </div>
+    </div>
+  </div>
+}

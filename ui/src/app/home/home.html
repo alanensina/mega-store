@@ -13,6 +13,7 @@
           <span class="badge">{{ cart.count() }}</span>
         }
       </button>
+      <button type="button" class="orders-btn" (click)="openMyOrders()">My orders</button>
       <button type="button" class="logout-btn" aria-label="Log out" (click)="logout()">Logout</button>
       @if (added()) {
         <div class="toast" role="status">{{ added() }} added to cart</div>

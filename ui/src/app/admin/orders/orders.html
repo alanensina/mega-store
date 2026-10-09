@@ -10,8 +10,10 @@
   <table>
     <thead>
       <tr>
+        <th>Order #</th>
         <th>Order ID</th>
         <th>Items</th>
+        <th>Date</th>
         <th>Status</th>
         <th class="num">Total</th>
       </tr>
@@ -19,14 +21,16 @@
     <tbody>
       @for (o of orders(); track o.id) {
         <tr class="clickable" (click)="open(o)">
+          <td>{{ o.orderNumber }}</td>
           <td>{{ o.id }}</td>
           <td>{{ itemCount(o) }}</td>
+          <td>{{ o.createdAt | date: 'short' }}</td>
           <td>{{ o.status }}</td>
           <td class="num">{{ o.totalPrice | currency }}</td>
         </tr>
       } @empty {
         <tr>
-          <td colspan="4" class="empty">{{ loading() ? 'Loading...' : 'No orders found.' }}</td>
+          <td colspan="6" class="empty">{{ loading() ? 'Loading...' : 'No orders found.' }}</td>
         </tr>
       }
     </tbody>
@@ -36,7 +40,8 @@
 @if (selected(); as order) {
   <div class="backdrop" (click)="close()">
     <div class="dialog details" role="dialog" aria-modal="true" (click)="$event.stopPropagation()">
-      <h2>Order {{ order.id }}</h2>
+      <h2>Order #{{ order.orderNumber }}</h2>
+      <p>{{ order.id }}</p>
       <table>
         <thead>
           <tr>

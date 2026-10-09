@@ -44,6 +44,7 @@ class NotificationDeliveryServiceTest {
                 orderId,
                 new CartDTO(
                         UUID.randomUUID(),
+                        1L,
                         UUID.randomUUID(),
                         BigDecimal.TEN,
                         ReservationStatus.PAID,

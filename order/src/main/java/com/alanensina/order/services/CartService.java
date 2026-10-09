@@ -167,6 +167,7 @@ public class CartService {
     private CartDTO toDTO(Cart cart) {
         return new CartDTO(
                 cart.getId(),
+                cart.getOrderNumber(),
                 cart.getCustomerId(),
                 cart.getTotalPrice(),
                 cart.getStatus(),
@@ -224,6 +225,7 @@ public class CartService {
                 orderId,
                 new CartDTO(
                         cart.getId(),
+                        cart.getOrderNumber(),
                         cart.getCustomerId(),
                         cart.getTotalPrice(),
                         cart.getStatus(),

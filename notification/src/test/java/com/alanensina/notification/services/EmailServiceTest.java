@@ -43,6 +43,7 @@ class EmailServiceTest {
                 orderId,
                 new CartDTO(
                         orderId,
+                        1L,
                         UUID.randomUUID(),
                         new BigDecimal("19.99"),
                         ReservationStatus.PAID,
@@ -58,14 +59,14 @@ class EmailServiceTest {
 
         SimpleMailMessage message = capturedMessage();
         assertArrayEquals(new String[]{"alice@example.com"}, message.getTo());
-        assertEquals("New order placed: ID" + orderId, message.getSubject());
+        assertEquals("New order placed: #1", message.getSubject());
         assertEquals("""
                 Hello Alice
                 Your order has been placed!
 
-                Order ID: %s
+                Order number: 1
                 Total price: 19.99€
-                Thank you!""".formatted(orderId), message.getText());
+                Thank you!""", message.getText());
     }
 
     @Test
@@ -73,13 +74,13 @@ class EmailServiceTest {
         emailService.sendCancellationEmail(event);
 
         SimpleMailMessage message = capturedMessage();
-        assertEquals("Order cancelled: ID" + orderId, message.getSubject());
+        assertEquals("Order cancelled: #1", message.getSubject());
         assertEquals("""
                 Hello Alice
                 Your order has been cancelled!
 
-                Order ID: %s
-                Thank you!""".formatted(orderId), message.getText());
+                Order number: 1
+                Thank you!""", message.getText());
     }
 
     @Test

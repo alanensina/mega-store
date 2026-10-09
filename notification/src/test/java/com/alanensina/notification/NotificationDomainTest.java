@@ -31,6 +31,7 @@ class NotificationDomainTest {
         LocalDateTime createdAt = LocalDateTime.now();
         CartDTO cart = new CartDTO(
                 id,
+                1L,
                 id,
                 BigDecimal.TEN,
                 ReservationStatus.PAID,
