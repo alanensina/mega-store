@@ -1,5 +1,7 @@
 # Mega Store
 
+The main idea of this project is to create a superstore and use it as a study base to learn new technologies and how to apply them to real-world problems encountered in day-to-day work.
+
 Mega Store is a local e-commerce application built from four Spring Boot microservices and an Angular storefront. The services communicate through REST APIs and Kafka, and each service persists its own data in PostgreSQL.
 
 ## Platform at a glance
