@@ -10,18 +10,18 @@
   <table>
     <thead>
       <tr>
-        <th>Order #</th>
-        <th>Order ID</th>
-        <th>Items</th>
-        <th>Date</th>
-        <th>Status</th>
-        <th class="num">Total</th>
+        <th scope="col">Order #</th>
+        <th scope="col">Order ID</th>
+        <th scope="col">Items</th>
+        <th scope="col">Date</th>
+        <th scope="col">Status</th>
+        <th scope="col" class="num">Total</th>
       </tr>
     </thead>
     <tbody>
       @for (o of orders(); track o.id) {
-        <tr class="clickable" (click)="open(o)">
-          <td>{{ o.orderNumber }}</td>
+        <tr>
+          <td><button type="button" class="order-btn" (click)="open(o)">Order #{{ o.orderNumber }}</button></td>
           <td>{{ o.id }}</td>
           <td>{{ itemCount(o) }}</td>
           <td>{{ o.createdAt | date: 'short' }}</td>
@@ -38,31 +38,29 @@
 </div>
 
 @if (selected(); as order) {
-  <div class="backdrop" (click)="close()">
-    <div class="dialog details" role="dialog" aria-modal="true" (click)="$event.stopPropagation()">
-      <h2>Order #{{ order.orderNumber }}</h2>
-      <p>{{ order.id }}</p>
-      <table>
-        <thead>
+  <dialog #orderDialog class="dialog details" aria-labelledby="order-dialog-title" (close)="close()">
+    <h2 id="order-dialog-title">Order #{{ order.orderNumber }}</h2>
+    <p>{{ order.id }}</p>
+    <table>
+      <thead>
+        <tr>
+          <th scope="col">Item</th>
+          <th scope="col" class="num">Qty</th>
+          <th scope="col" class="num">Unit price</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (i of order.items; track i.productId) {
           <tr>
-            <th>Item</th>
-            <th class="num">Qty</th>
-            <th class="num">Unit price</th>
+            <td>{{ nameOf(i.productId) }}</td>
+            <td class="num">{{ i.quantity }}</td>
+            <td class="num">{{ i.price | currency }}</td>
           </tr>
-        </thead>
-        <tbody>
-          @for (i of order.items; track i.productId) {
-            <tr>
-              <td>{{ nameOf(i.productId) }}</td>
-              <td class="num">{{ i.quantity }}</td>
-              <td class="num">{{ i.price | currency }}</td>
-            </tr>
-          }
-        </tbody>
-      </table>
-      <div class="dialog-actions">
-        <button type="button" (click)="close()">Close</button>
-      </div>
+        }
+      </tbody>
+    </table>
+    <div class="dialog-actions">
+      <button type="button" (click)="close()">Close</button>
     </div>
-  </div>
+  </dialog>
 }

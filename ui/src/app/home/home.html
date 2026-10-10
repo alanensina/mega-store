@@ -7,7 +7,7 @@
       <p class="subtitle">Welcome {{ customer?.name }}</p>
     </div>
     <div class="actions">
-      <button type="button" class="cart-btn" aria-label="Open cart" (click)="openCart()">
+      <button type="button" class="cart-btn" (click)="openCart()">
         🛒 Cart
         @if (cart.count() > 0) {
           <span class="badge">{{ cart.count() }}</span>
@@ -16,7 +16,7 @@
       <button type="button" class="orders-btn" (click)="openMyOrders()">My orders</button>
       <button type="button" class="logout-btn" aria-label="Log out" (click)="logout()">Logout</button>
       @if (added()) {
-        <div class="toast" role="status">{{ added() }} added to cart</div>
+        <output class="toast">{{ added() }} added to cart</output>
       }
     </div>
   </header>

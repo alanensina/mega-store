@@ -1,88 +1,101 @@
-Order Service (order)
-======================
+# Order Service
 
-Overview
---------
-This is a Spring Boot microservice that implements an Order/Cart API. It stores carts and their items in PostgreSQL, publishes order and notification events to Kafka topics, and uses Flyway for schema migrations. The service also fetches customer details from an external Customer API to enrich notifications.
+Order provides the cart and order API for Mega Store. It persists each cart and its items in PostgreSQL, assigns a sequential order number, and publishes order and notification events to Kafka through a transactional outbox.
 
-Main features
--------------
-- REST API for creating, listing, retrieving, updating, and cancelling carts
-- Persists carts and items in PostgreSQL (Flyway migrations included)
-- Publishes OrderEvent and Notification messages to configurable Kafka topics
-- Automatic topic initialization helper script (create_topics.sh)
-- OpenAPI/Swagger UI available for interactive API exploration
+## Features
 
-API endpoints
--------------
-Base path: /api/cart
-- POST /api/cart        -> Create a new cart
-- GET  /api/cart        -> List all carts
-- GET  /api/cart/{id}   -> Get cart by id (UUID)
-- PUT  /api/cart        -> Update cart
-- PUT  /api/cart/cancel/{id} -> Cancel cart
+- Create, list, fetch, update, and cancel carts/orders.
+- Calculate and persist order totals and expose a sequential `orderNumber` alongside each order UUID.
+- Fetch customer name and email from Customer for notifications, forwarding the caller's JWT.
+- Save Kafka event payloads in an outbox within the same database transaction as the order change.
+- Publish pending outbox events on a schedule, with configurable exponential retry delays and a maximum attempt count.
+- Initialize the configured Kafka topics on service startup and track initialization in the database.
+- Use optimistic locking to detect conflicting order updates and return `409 Conflict`.
+- Apply database migrations automatically through Flyway.
 
-Swagger UI: /swagger-ui
-OpenAPI JSON: /v3/api-docs
+## Technology and local dependencies
 
-Requirements
-------------
-- Java 26 (configured in pom.xml via <java.version>)
-- Maven 3.6+
-- PostgreSQL (default: jdbc:postgresql://localhost:5435/order-service)
-- Kafka broker accessible (default: localhost:9094)
-- Optional: Docker if using the provided topic creation script with a containerized Kafka
+- Java 26, Spring Boot, Spring Data JPA, Spring Kafka, and Maven
+- PostgreSQL at `localhost:5435`, database `order-service`
+- Kafka at `localhost:9094`
+- Customer API at `http://localhost:8081` for customer details
+- Environment variables: `ORDER_DB_USERNAME`, `ORDER_DB_PASSWORD`, and `JWT_SECRET`
 
-Configuration
--------------
-Configuration keys are in src/main/resources/application.properties (overridable via environment variables or external properties):
-- server.port (default 8082)
-- spring.datasource.url / username / password
-- spring.flyway.locations (migrations are in classpath:db/migration)
-- spring.kafka.producer.bootstrap-servers / spring.kafka.bootstrap-servers
-- spring.kafka.orders.topic.name (default orders_topic)
-- spring.kafka.orders.notification.topic.name (default orders_notification)
-- jwt.secret (must match the Customer API signing secret)
+The service publishes to `orders_topic` for Inventory and `orders_notification` for Notification. Start PostgreSQL and Kafka with Docker Compose, and start Customer before creating or cancelling orders. See the [project README](../README.md) for setup instructions.
 
-Important: The service expects a Customer API at http://localhost:8081/api/customer/{id} to fetch customer name/email used in notifications. If unavailable, customer fetch errors will be raised.
+## Run
 
-## Security
+From the repository root:
 
-The Cart API is protected by Spring Security and JWT authentication. The only accepted token is the JWT issued by the Customer API `POST /api/auth` endpoint. The Order service validates the token locally with the shared `jwt.secret`.
+```bash
+./order/mvnw -f order/pom.xml spring-boot:run
+```
 
-Send the token in every Cart API request:
+The API listens on `http://localhost:8082`.
 
-```text
+## API
+
+Base path: `/api/cart`
+All cart endpoints require a JWT issued by Customer:
+
+```http
 Authorization: Bearer <jwt-token>
 ```
 
-Swagger UI and the OpenAPI document are public. Use the **Authorize** button in Swagger UI with the JWT returned by the Customer API before executing Cart requests. Health and info actuator endpoints remain public.
+| Method | Path | Description |
+| --- | --- | --- |
+| `POST` | `/api/cart` | Create an order |
+| `GET` | `/api/cart` | List orders |
+| `GET` | `/api/cart/{id}` | Fetch an order by UUID |
+| `PUT` | `/api/cart` | Update an order |
+| `PUT` | `/api/cart/cancel/{id}` | Cancel an order |
 
-When `CartService` calls `GET http://localhost:8081/api/customer/{id}`, it forwards the original `Authorization` header. The Customer API validates the same customer-issued token, so no separate service token is required.
+Create request example:
 
-Database migrations
--------------------
-Flyway migrations are included under src/main/resources/db/migration (V1__create_order_table.sql and V2__create_topic_initialization_table.sql). Flyway runs on startup by default.
+```json
+{
+  "customerId": "customer-uuid",
+  "items": [
+    {
+      "productId": "product-uuid",
+      "quantity": 2,
+      "price": 24.99
+    }
+  ]
+}
+```
 
-Kafka topics
-------------
-A helper script create_topics.sh is provided in resources to create topics if the kafka CLI or docker is available. The application also runs a small initializer (KafkaTopicInitializerConfig) that executes the script on startup and records initialization in a topic_initialization table.
+The response includes the order UUID, sequential `orderNumber`, customer UUID, total price, status, timestamps, and item list. The service records an order event for Inventory and a notification event for Notification when an order is created. Cancellation records corresponding cancel events. Updates publish an order event for Inventory.
 
-Build & run
------------
-- Build: mvn clean package
-- Run with Maven: mvn spring-boot:run
-- Run jar: java -jar target/order-0.0.1-SNAPSHOT.jar
+Swagger UI: [http://localhost:8082/swagger-ui](http://localhost:8082/swagger-ui)
+OpenAPI document: [http://localhost:8082/v3/api-docs](http://localhost:8082/v3/api-docs)
 
-Testing
--------
-- Run unit tests: mvn test
+## Transactional outbox and delivery
 
-Notes
------
-- The project uses Lombok; IDEs should enable annotation processing.
-- Adjust application.properties for production credentials, ports, and broker addresses.
+Order changes and their Kafka events are stored in the same PostgreSQL transaction. A scheduled publisher reads pending events in batches and sends them to their configured topic. This avoids losing an event when an order is committed but Kafka is temporarily unavailable.
 
-License & authors
------------------
-See repository metadata. (No license file included in this module.)
+Publishing failures increment the event's attempt count and schedule a later retry with capped exponential backoff. Defaults are a one-second initial delay, a five-minute maximum delay, and ten attempts; these can be overridden with:
+
+| Property | Default | Purpose |
+| --- | ---: | --- |
+| `order.outbox.publish-delay-ms` | `1000` | Delay between publish scans |
+| `order.outbox.retry-initial-delay-ms` | `1000` | Initial retry delay |
+| `order.outbox.retry-max-delay-ms` | `300000` | Maximum retry delay |
+| `order.outbox.max-attempts` | `10` | Attempts before an event is held for inspection |
+
+Events that reach the attempt limit remain unpublished in the outbox for investigation; they are not silently discarded.
+
+## Security and configuration
+
+Order validates Customer-issued JWTs locally. Set `JWT_SECRET` to the same value used by Customer and Inventory. When Order calls `GET /api/customer/{id}`, it forwards the original request's `Authorization` header.
+
+Database credentials are configured with `ORDER_DB_USERNAME` and `ORDER_DB_PASSWORD`. Kafka defaults to `localhost:9094`; topic names can be configured with `spring.kafka.orders.topic.name` and `spring.kafka.orders.notification.topic.name`.
+
+## Build and test
+
+From the repository root:
+
+```bash
+./order/mvnw -f order/pom.xml test
+./order/mvnw -f order/pom.xml clean package
+```

@@ -42,13 +42,11 @@
 </div>
 
 @if (pendingDelete(); as item) {
-  <div class="backdrop" (click)="cancelDelete()">
-    <div class="dialog" role="alertdialog" aria-modal="true" (click)="$event.stopPropagation()">
-      <p>Delete <strong>{{ item.name }}</strong>?</p>
-      <div class="dialog-actions">
-        <button type="button" class="danger" [disabled]="deleting()" (click)="confirmDelete()">Delete</button>
-        <button type="button" [disabled]="deleting()" (click)="cancelDelete()">Cancel</button>
-      </div>
+  <dialog #deleteDialog class="dialog" (cancel)="$event.preventDefault(); cancelDelete()">
+    <p>Delete <strong>{{ item.name }}</strong>?</p>
+    <div class="dialog-actions">
+      <button type="button" class="danger" [disabled]="deleting()" (click)="confirmDelete()">Delete</button>
+      <button type="button" [disabled]="deleting()" (click)="cancelDelete()">Cancel</button>
     </div>
-  </div>
+  </dialog>
 }

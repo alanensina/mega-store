@@ -1,118 +1,136 @@
-# mega-store (microservices)
+# Mega Store
 
-This repository contains a small set of Spring Boot microservices that make up a simple e-commerce platform (mega-store). Each service is a standalone Maven-based Java application. They communicate via REST and Kafka and persist data in PostgreSQL databases.
+Mega Store is a local e-commerce application built from four Spring Boot microservices and an Angular storefront. The services communicate through REST APIs and Kafka, and each service persists its own data in PostgreSQL.
 
-## Unit test coverage
+## Platform at a glance
 
-All four microservices (Customer, Inventory, Order and Notification) have unit test coverage of 100% for lines, methods and branches.
+| Component | Port | Responsibility |
+| --- | ---: | --- |
+| Customer | `8081` | Customer registration, profiles, login, and JWT issuance |
+| Inventory | `8080` | Products, stock, and order-driven reservations |
+| Order | `8082` | Cart/order lifecycle and order/notification events |
+| Notification | `8083` | Kafka-driven customer email delivery |
+| UI | `4200` | Storefront and admin interface |
 
-Services
---------
-- customer (port 8081)
-  - Manages customer records and authentication (BCrypt).
-  - PostgreSQL: jdbc:postgresql://localhost:5434/customer-service
-  - Swagger UI: http://localhost:8081/swagger-ui
-  - Endpoints: /api/customer, /api/auth
+Each backend has an independent PostgreSQL database. Kafka runs locally on `localhost:9094`.
 
-- inventory (port 8080)
-  - Manages products, stock and reservations.
-  - PostgreSQL: jdbc:postgresql://localhost:5433/inventory-service
-  - Exposes product/stock/reservation CRUD and reservation logic.
-  - Swagger UI: http://localhost:8080/swagger-ui
+## How an order flows through the system
 
-- order (port 8082)
-  - Cart / order API, persists carts, publishes Order and Notification events to Kafka.
-  - PostgreSQL: jdbc:postgresql://localhost:5435/order-service
-  - Publishes to Kafka topics: orders_topic and orders_notification
-  - Includes helper to initialize Kafka topics (create_topics.sh)
-  - Swagger UI: http://localhost:8082/swagger-ui
+1. A customer signs in through Customer and receives a JWT. The UI sends it to protected APIs as a Bearer token.
+2. The UI submits a cart to Order. Order fetches customer details from Customer, forwarding the caller's JWT.
+3. In one database transaction, Order saves the cart and corresponding outbox events. A scheduled publisher sends pending events to Kafka, retrying failures with backoff.
+4. Inventory consumes order events to create, update, or cancel stock reservations. It records processed event IDs to avoid applying duplicate deliveries twice. Transient consumer failures are retried; exhausted records are routed to a dead-letter topic.
+5. Notification consumes order email events and uses SMTP to send new-order or cancellation messages. Delivery records and temporary leases help suppress duplicate processing and coordinate retries.
 
-- notification (port 8083)
-  - Consumes Kafka notification events and sends transactional emails (Gmail SMTP).
-  - Listens on Kafka topic: orders_notification
-  - Does not expose a CRUD API — it reacts to events.
+## Services
 
-How they interact
------------------
-1. Clients authenticate through `POST /api/auth` on the Customer service and receive a signed JWT.
-2. Clients send that JWT as `Authorization: Bearer <jwt-token>` when calling the protected Order and Inventory APIs.
-3. The Order service publishes events to Kafka (orders_topic / orders_notification).
-4. Inventory service can consume product/reservation events or be called directly to reserve stock.
-5. Notification service consumes notification events and sends emails to customers.
-6. Customer service stores customer data; Order service may call it to enrich notifications.
+| Service | Database | Kafka topics | API documentation |
+| --- | --- | --- | --- |
+| [Customer](customer/README.md) | `localhost:5434/customer-service` | — | [Swagger](http://localhost:8081/swagger-ui) |
+| [Inventory](inventory/README.md) | `localhost:5433/inventory-service` | Consumes `orders_topic` | [Swagger](http://localhost:8080/swagger-ui) |
+| [Order](order/README.md) | `localhost:5435/order-service` | Publishes `orders_topic`, `orders_notification` | [Swagger](http://localhost:8082/swagger-ui) |
+| [Notification](notification/README.md) | `localhost:5436/notification-service` | Consumes `orders_notification` | No public CRUD API |
 
-Spring Security
----------------
-Customer, Order, and Inventory use Spring Security with JWT authentication. Customer is the token issuer; Order and Inventory validate the same token locally using the shared `jwt.secret`. Product, Stock, Reservation, and Cart endpoints require that token, while Customer login/registration, Swagger UI/OpenAPI, and health/info actuator endpoints are public as configured by each service.
+The UI has its own [README](ui/README.md), including its local development server and API proxy configuration.
 
-The Order service propagates the original Bearer token when `CartService` calls the protected Customer endpoint to retrieve customer details. This preserves a single authentication flow and avoids creating a separate service token.
+## Requirements
 
-Each protected service exposes a `bearerAuth` scheme in Swagger UI. Use **Authorize** with the token returned by Customer `/api/auth` before making protected requests.
-
-Requirements
-------------
 - JDK 26
-- Maven (the projects include the Maven wrapper: ./mvnw)
-- PostgreSQL (one database per service; see each service properties for ports)
-- Kafka broker (default expected at localhost:9094)
-- Docker & docker-compose (optional, a docker-compose.yml is included to start Kafka and related infra)
-- For notification service emailing: a Gmail account with an App Password (for SMTP)
+- Docker Compose for local PostgreSQL and Kafka
+- Node.js compatible with Angular 22 and npm to run the UI
+- A Gmail account with an App Password, or another compatible SMTP setup, to deliver emails
 
-Local setup (quick)
--------------------
-1. Create a local `.env` from `.env.example`, replace every placeholder with
-   private values, and load it into the current shell:
-   cp .env.example .env
-   set -a; source .env; set +a
+## Run locally
 
-2. Start infrastructure with Docker Compose (optional):
-   docker compose up -d
-   This will start Kafka and support services configured in docker-compose.yml.
+### 1. Configure environment variables
 
-3. Ensure PostgreSQL instances/databases are available on the ports configured in each service's application.properties (inventory:5433, customer:5434, order:5435).
+Create a `.env` file in the repository root. Compose reads it to configure PostgreSQL; the same values must be available in the shell that starts the Java services.
 
-4. Build and run services (examples):
-   - Build all modules (from repo root):
-     mvn -T 1C -pl customer,inventory,order,notification -am clean package
+```dotenv
+INVENTORY_DB_USERNAME=inventory
+INVENTORY_DB_PASSWORD=change-me
+CUSTOMER_DB_USERNAME=customer
+CUSTOMER_DB_PASSWORD=change-me
+ORDER_DB_USERNAME=orders
+ORDER_DB_PASSWORD=change-me
+NOTIFICATION_DB_USERNAME=notification
+NOTIFICATION_DB_PASSWORD=change-me
+JWT_SECRET=replace-with-a-long-random-secret-shared-by-customer-inventory-and-order
+MAIL_USERNAME=your-account@gmail.com
+MAIL_PASSWORD=your-gmail-app-password
+```
 
-   - Run a single service using the Maven wrapper:
-     ./customer/mvnw -f customer/pom.xml spring-boot:run
-     ./inventory/mvnw -f inventory/pom.xml spring-boot:run
-     ./order/mvnw -f order/pom.xml spring-boot:run
-     ./notification/mvnw -f notification/pom.xml spring-boot:run
+Keep real credentials private and do not commit `.env`. Docker Compose reads this file automatically. In every terminal that starts a Java service, export its variables before launching it:
 
-   - Or run the packaged jars:
-     java -jar inventory/target/inventory-0.0.1-SNAPSHOT.jar
+```bash
+set -a
+source .env
+set +a
+```
 
-5. Initialize Kafka topics (if needed):
-   The order service contains a helper script (resources/create_topics.sh). Use it with a Kafka CLI or the containerized Kafka that comes from docker-compose.
+### 2. Start PostgreSQL and Kafka
 
-Configuration
--------------
-Each service exposes configuration in src/main/resources/application.properties. Important values to review and adapt before running:
-- server.port (each service's HTTP port)
-- spring.datasource.url / username / password (database connection)
-- Kafka bootstrap servers and topic names (default: localhost:9094)
-- For notification: spring.mail.* (SMTP host, username and App Password)
-- JWT: `jwt.secret` must be the same in customer, inventory, and order
+From the repository root:
 
-Useful endpoints
-----------------
-- customer Swagger: http://localhost:8081/swagger-ui
-- inventory Swagger: http://localhost:8080/swagger-ui
-- order Swagger: http://localhost:8082/swagger-ui
+```bash
+docker compose up -d
+```
 
-Notes & recommendations
------------------------
-- Flyway migrations run on startup; ensure DB users can create schema or pre-create DBs.
-- Use the provided Maven wrapper (./mvnw) to avoid local Maven version issues.
-- Set trusted packages or JSON deserializers appropriately for Kafka messages when exposing services across networks.
-- Keep credentials out of source control; use environment variables or externalized configuration for production.
+This starts the four databases on ports `5433`–`5436` and Kafka on `9094`. It does not start the Java services or the UI.
 
-Where to find more
-------------------
-Each service has its own README in its folder with detailed API examples, DTOs, and instructions. See:
-- customer/README.md
-- inventory/README.md
-- order/README.md
-- notification/README.md
+### 3. Start the backend services
+
+Run each command in a separate terminal from the repository root. Database migrations are applied by Flyway when each service starts.
+
+```bash
+./customer/mvnw -f customer/pom.xml spring-boot:run
+./inventory/mvnw -f inventory/pom.xml spring-boot:run
+./order/mvnw -f order/pom.xml spring-boot:run
+./notification/mvnw -f notification/pom.xml spring-boot:run
+```
+
+Order initializes its configured Kafka topics on startup. Notification email delivery requires valid SMTP credentials; without them, other services can still run, but emails will not be delivered.
+
+### 4. Start the UI
+
+In another terminal:
+
+```bash
+cd ui
+npm ci
+npm start
+```
+
+Open [http://localhost:4200](http://localhost:4200). The Angular development server proxies `/api/product` and `/api/stock` to Inventory, `/api/cart` to Order, and other `/api` calls to Customer.
+
+## Authentication and API docs
+
+Customer issues signed JWTs from `POST /api/auth`. Inventory and Order validate those tokens locally, so `JWT_SECRET` must be identical for all three services. Customer registration and login are public; protected endpoints require:
+
+```http
+Authorization: Bearer <jwt-token>
+```
+
+Swagger UI is available at the links in the services table. Use its **Authorize** button with the JWT to try protected endpoints. Health and info actuator endpoints are exposed by the services.
+
+## Build and test
+
+Each service is an independent Maven project. For example, from the repository root:
+
+```bash
+./inventory/mvnw -f inventory/pom.xml clean package
+./inventory/mvnw -f inventory/pom.xml test
+```
+
+Run the corresponding wrapper under `customer/`, `order/`, or `notification/` to build or test those services. For the UI, run `npm run build` or `npm test` from `ui/`.
+
+## Repository layout
+
+```text
+customer/      Customer, profile, and authentication API
+inventory/     Product, stock, and reservation API/consumer
+order/         Cart/order API and Kafka outbox publisher
+notification/  Kafka consumer and email delivery
+ui/            Angular storefront and administration interface
+docker-compose.yml
+```

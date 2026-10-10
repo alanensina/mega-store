@@ -1,248 +1,118 @@
-# Customer API
+# Customer Service
 
-Customer API is a Spring Boot REST service for managing customer records and authenticating customers by username and password. The service stores customer details in PostgreSQL, hashes passwords with BCrypt, and exposes Swagger UI documentation for testing the endpoints.
+Customer is the identity and customer-profile service for Mega Store. It provides public registration and login, protected customer management endpoints, BCrypt password hashing, and signed JWTs used by the Inventory and Order services.
 
 ## Features
 
-- Create, list, fetch, update, and delete customer records
-- Prevent duplicate usernames or emails
-- Validate input fields with Bean Validation
-- Hash passwords with BCrypt before storing them
-- Persist data with PostgreSQL and Flyway migrations
-- Expose API documentation with SpringDoc OpenAPI
+- Register customers and manage customer profiles.
+- Authenticate with a username and password; issue a signed JWT on successful login.
+- Enforce unique usernames and email addresses.
+- Hash passwords with BCrypt and never include password hashes in API responses.
+- Include an `admin` flag in customer and authentication responses for role-aware clients such as the UI.
+- Use optimistic locking to detect concurrent updates and return `409 Conflict`, allowing clients to reload and retry.
+- Apply database schema migrations with Flyway.
 
-## Tech stack
+## Technology and local dependencies
 
-- Java 26
-- Spring Boot 4.1.1
-- Spring Web MVC
-- Spring Data JPA
-- PostgreSQL
-- Flyway
-- Spring Security Crypto (BCrypt)
-- Spring Security with JWT authentication
-- SpringDoc OpenAPI / Swagger UI
-- Maven
+- Java 26, Spring Boot, Spring MVC, Spring Data JPA, and Maven
+- PostgreSQL at `localhost:5434`, database `customer-service`
+- Environment variables: `CUSTOMER_DB_USERNAME`, `CUSTOMER_DB_PASSWORD`, and `JWT_SECRET`
 
-## Unit test coverage
+The database can be started with Docker Compose from the repository root; see the [project README](../README.md) for setup instructions. Flyway migrations run at service startup.
 
-The Customer service has 100% unit test coverage for lines, methods and branches.
+## Run
 
-## Database model
-
-The application persists customer data in a `CUSTOMER` table with these fields:
-
-- `id`: UUID primary key
-- `name`: customer name
-- `email`: customer email
-- `username`: unique username
-- `password`: BCrypt-hashed password
-- `created_at`: creation timestamp
-- `updated_at`: last update timestamp
-
-The Flyway migration creates the table and adds unique/lookup indexes for email, username, and searchable fields.
-
-## Configuration
-
-The application configuration is in `src/main/resources/application.properties`.
-
-```properties
-server.port=8081
-
-spring.datasource.url=jdbc:postgresql://localhost:5434/customer-service
-spring.datasource.username=user
-spring.datasource.password=your_password
-
-spring.flyway.enabled=true
-spring.flyway.locations=classpath:db/migration
-spring.jpa.hibernate.ddl-auto=none
-
-springdoc.api-docs.enabled=true
-springdoc.swagger-ui.enabled=true
-springdoc.swagger-ui.path=/swagger-ui
-springdoc.api-docs.path=/v3/api-docs
-
-jwt.secret=changeit
-jwt.expiration-ms=3600000
-```
-
-Notes:
-
-- The project expects PostgreSQL running locally on port `5434`.
-- Flyway applies the migration automatically when the application starts.
-
-## Security
-
-Customer authentication is implemented with Spring Security and signed JWTs:
-
-- `POST /api/auth` is public and authenticates a customer by username and password.
-- A successful login returns an `AuthenticationResponse` containing the customer data and a JWT.
-- `POST /api/customer` is public for customer registration.
-- The remaining customer endpoints require `Authorization: Bearer <token>`.
-- Tokens are signed with `jwt.secret` and expire according to `jwt.expiration-ms` (one hour by default).
-- Invalid, expired, or missing tokens are rejected by the JWT authentication filter.
-
-Swagger UI and the OpenAPI document are public so the API can be explored. Use the **Authorize** button in Swagger UI and enter the JWT returned by `/api/auth` as a Bearer token before calling protected endpoints.
-
-## Running the application
-
-Requirements:
-
-- Java 26
-- Maven wrapper compatible with the project
-- PostgreSQL instance running and configured as above
-
-Run the app with:
+From the repository root:
 
 ```bash
-./mvnw spring-boot:run
+./customer/mvnw -f customer/pom.xml spring-boot:run
 ```
 
-The API will be available at:
+The API listens on `http://localhost:8081`.
 
-- HTTP: `http://localhost:8081`
-- Swagger UI: `http://localhost:8081/swagger-ui`
-- OpenAPI JSON: `http://localhost:8081/v3/api-docs`
+## API
 
-## API endpoints
+Base URL: `http://localhost:8081`
 
-### Authentication
+| Method | Path | Access | Description |
+| --- | --- | --- | --- |
+| `POST` | `/api/auth` | Public | Authenticate and receive customer details and a JWT |
+| `POST` | `/api/customer` | Public | Register a customer |
+| `GET` | `/api/customer` | JWT | List customers |
+| `GET` | `/api/customer/{id}` | JWT | Fetch a customer by UUID |
+| `PUT` | `/api/customer` | JWT | Update a customer |
+| `DELETE` | `/api/customer?id={id}` | JWT | Delete a customer |
 
-#### POST `/api/auth`
+Swagger UI: [http://localhost:8081/swagger-ui](http://localhost:8081/swagger-ui)
+OpenAPI document: [http://localhost:8081/v3/api-docs](http://localhost:8081/v3/api-docs)
 
-Authenticates a customer by username and password.
+### Register
 
-Request body:
+```http
+POST /api/customer
+Content-Type: application/json
+```
 
 ```json
 {
-  "username": "john",
+  "name": "Jordan Lee",
+  "email": "jordan@example.com",
+  "username": "jordan",
   "password": "secret123"
 }
 ```
 
-Successful response:
+Name and username must be non-blank, email must be valid, and password length must be between 8 and 16 characters. A newly registered customer is not an administrator by default.
 
-```json
-{
-  "customer": {
-    "id": "c7d0d8a3-4d3e-4f8b-9a2a-f73d1c4f0f21",
-    "name": "John Doe",
-    "email": "john@example.com",
-    "username": "john",
-    "createdAt": "2026-09-10T12:00:00",
-    "updatedAt": "2026-09-10T12:00:00"
-  },
-  "token": "<jwt-token>"
-}
+### Log in
+
+```http
+POST /api/auth
+Content-Type: application/json
 ```
 
-### Customer management
-
-#### POST `/api/customer`
-
-Creates a new customer.
-
-Request body:
-
 ```json
 {
-  "name": "John Doe",
-  "email": "john@example.com",
-  "username": "john",
+  "username": "jordan",
   "password": "secret123"
 }
 ```
 
-Validation rules:
+The response contains a `customer` object (including its `admin` flag) and a `token`. Use the token to call protected endpoints:
 
-- `name` is required
-- `email` must be a valid email address
-- `username` is required
-- `password` must be between 8 and 16 characters
+```http
+Authorization: Bearer <jwt-token>
+```
 
-#### GET `/api/customer`
+### Update a customer
 
-Returns all customers.
-
-#### GET `/api/customer/{id}`
-
-Returns a single customer by UUID.
-
-#### PUT `/api/customer`
-
-Updates an existing customer.
-
-Request body:
+Send the customer UUID and updated profile fields. The password is optional; when supplied, it is validated and stored as a new BCrypt hash.
 
 ```json
 {
-  "id": "c7d0d8a3-4d3e-4f8b-9a2a-f73d1c4f0f21",
-  "name": "John Smith",
-  "email": "johnsmith@example.com",
-  "username": "johnsmith",
+  "id": "customer-uuid",
+  "name": "Jordan Lee",
+  "email": "jordan@example.com",
+  "username": "jordan",
   "password": "newsecret123"
 }
 ```
 
-#### DELETE `/api/customer?id={id}`
+An update that would duplicate another customer's username or email is rejected. If another request updates the same customer concurrently, the API responds with `409 Conflict`.
 
-Deletes a customer by ID.
+## Security and configuration
 
-## Business rules and validation
+- Login (`POST /api/auth`) and registration (`POST /api/customer`) are public. Other customer endpoints require a valid JWT.
+- The JWT is signed using `JWT_SECRET` and expires after one hour by default.
+- `JWT_SECRET` must match the value used by the Inventory and Order services.
+- Configure database credentials with `CUSTOMER_DB_USERNAME` and `CUSTOMER_DB_PASSWORD`.
+- Swagger and OpenAPI endpoints are enabled for local API exploration.
 
-- Username and email must be unique across the system
-- Authentication fails if the username is not found or the password does not match
-- Passwords are never returned in API responses
-- The service uses `CustomerDTO` to expose only safe customer fields
+## Build and test
 
-## Error handling
-
-This API uses standard Spring Boot HTTP status responses:
-
-- `400 Bad Request`: invalid credentials, missing customer, or validation failures
-- `409 Conflict`: customer with the same username or email already exists
-- `500 Internal Server Error`: unexpected server-side issue during password hashing or other processing
-
-## Notes
-
-- Passwords are stored as BCrypt hashes, not plain text.
-- The `Customer` entity uses `UUID` as the identifier.
-- Swagger is configured in `SwaggerConfig` and describes the project as `customer-api` with version `1.0`.
-
-## Example cURL requests
-
-Create customer:
+From the repository root:
 
 ```bash
-curl -X POST http://localhost:8081/api/customer \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "John Doe",
-    "email": "john@example.com",
-    "username": "john",
-    "password": "secret123"
-  }'
+./customer/mvnw -f customer/pom.xml test
+./customer/mvnw -f customer/pom.xml clean package
 ```
-
-Login:
-
-```bash
-curl -X POST http://localhost:8081/api/auth \
-  -H "Content-Type: application/json" \
-  -d '{
-    "username": "john",
-    "password": "secret123"
-  }'
-```
-
-Get all customers:
-
-```bash
-curl http://localhost:8081/api/customer \
-  -H "Authorization: Bearer <jwt-token>"
-```
-
-## Summary
-
-Customer API provides a clean, production-oriented backend for customer registration, updates, lookup, and authentication using secure password handling and PostgreSQL persistence. It is small, easy to run locally, and documented through Swagger UI for rapid exploration and testing.

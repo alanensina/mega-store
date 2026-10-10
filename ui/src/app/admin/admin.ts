@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, OnInit } from '@angular/core';
 import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { clearSession, getCustomer } from '../session';
 
@@ -8,11 +8,11 @@ import { clearSession, getCustomer } from '../session';
   templateUrl: './admin.html',
   styleUrl: './admin.css',
 })
-export class Admin {
+export class Admin implements OnInit {
   private readonly router = inject(Router);
   protected readonly customer = getCustomer();
 
-  constructor() {
+  ngOnInit(): void {
     if (!this.customer?.admin) this.router.navigate(['/']);
   }
 

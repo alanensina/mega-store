@@ -1,6 +1,6 @@
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { CurrencyPipe } from '@angular/common';
-import { Component, inject, signal } from '@angular/core';
+import { Component, inject, OnInit, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { CartService } from '../cart.service';
 import { getCustomer } from '../session';
@@ -11,7 +11,7 @@ import { getCustomer } from '../session';
   templateUrl: './cart.html',
   styleUrl: '../home/home.css',
 })
-export class Cart {
+export class Cart implements OnInit {
   private readonly http = inject(HttpClient);
   private readonly router = inject(Router);
   protected readonly cart = inject(CartService);
@@ -21,7 +21,7 @@ export class Cart {
   protected readonly error = signal('');
   protected readonly success = signal(false);
 
-  constructor() {
+  ngOnInit(): void {
     if (!this.customer) this.router.navigate(['/']);
   }
 

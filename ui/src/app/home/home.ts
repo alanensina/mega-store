@@ -1,6 +1,6 @@
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { CurrencyPipe } from '@angular/common';
-import { Component, inject, signal } from '@angular/core';
+import { Component, inject, OnInit, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { CartService } from '../cart.service';
 import { clearSession, getCustomer } from '../session';
@@ -18,7 +18,7 @@ interface Product {
   templateUrl: './home.html',
   styleUrl: './home.css',
 })
-export class Home {
+export class Home implements OnInit {
   private readonly http = inject(HttpClient);
   private readonly router = inject(Router);
   protected readonly cart = inject(CartService);
@@ -30,7 +30,7 @@ export class Home {
   protected readonly error = signal('');
   protected readonly added = signal('');
 
-  constructor() {
+  ngOnInit(): void {
     if (!this.customer) {
       this.router.navigate(['/']);
       return;

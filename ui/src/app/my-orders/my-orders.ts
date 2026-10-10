@@ -1,5 +1,5 @@
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
-import { Component, inject, signal } from '@angular/core';
+import { Component, effect, ElementRef, inject, OnInit, signal, viewChild } from '@angular/core';
 import { CurrencyPipe, DatePipe } from '@angular/common';
 import { Router } from '@angular/router';
 import { getCustomer } from '../session';
@@ -26,7 +26,7 @@ interface OrderRow {
   templateUrl: './my-orders.html',
   styleUrl: './my-orders.css',
 })
-export class MyOrders {
+export class MyOrders implements OnInit {
   private readonly http = inject(HttpClient);
   private readonly router = inject(Router);
   private readonly customer = getCustomer();
@@ -37,8 +37,14 @@ export class MyOrders {
   protected readonly error = signal('');
   protected readonly cancelling = signal(false);
   protected readonly selected = signal<OrderRow | null>(null);
+  private readonly orderDialog = viewChild<ElementRef<HTMLDialogElement>>('orderDialog');
 
-  constructor() {
+  private readonly showSelectedDialog = effect(() => {
+    const dialog = this.orderDialog()?.nativeElement;
+    if (dialog && !dialog.open) dialog.showModal();
+  });
+
+  ngOnInit(): void {
     if (!this.customer) {
       this.router.navigate(['/']);
       return;

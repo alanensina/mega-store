@@ -158,13 +158,46 @@ class ProductServiceTest {
     }
 
     @Test
+    void updateShouldApplyPriceAndStockQuantityWhenProvided() {
+        Stock stock = new Stock();
+        stock.setQuantity(1);
+        when(productRepository.findById(productId)).thenReturn(Optional.of(product("Keyboard", true)));
+        when(productRepository.save(any(Product.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(stockRepository.findByProductId(productId)).thenReturn(Optional.of(stock));
+
+        ProductDTO result = productService.updateProduct(
+                new UpdateProductDTO(productId, "keyboard", true, BigDecimal.ONE, 7));
+
+        assertEquals(BigDecimal.ONE, result.price());
+        assertEquals(7, stock.getQuantity());
+        assertNotNull(stock.getUpdatedAt());
+        verify(stockRepository).save(stock);
+        verify(productRepository, never()).existsByNameIgnoreCase(any());
+    }
+
+    @Test
+    void updateShouldNotSaveStockWhenProductHasNoStock() {
+        when(productRepository.findById(productId)).thenReturn(Optional.of(product("Keyboard", true)));
+        when(productRepository.save(any(Product.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(stockRepository.findByProductId(productId)).thenReturn(Optional.empty());
+
+        productService.updateProduct(new UpdateProductDTO(productId, "Keyboard", true, null, 7));
+
+        verify(stockRepository, never()).save(any());
+    }
+
+    @Test
     void deleteShouldReturnAndDeleteProduct() {
         Product product = product("Keyboard", true);
         when(productRepository.findById(productId)).thenReturn(Optional.of(product));
 
+        Stock stock = new Stock();
+        when(stockRepository.findByProductId(productId)).thenReturn(Optional.of(stock));
+
         ProductDTO result = productService.deleteById(productId);
 
         assertEquals(productId, result.id());
+        verify(stockRepository).delete(stock);
         verify(productRepository).deleteById(productId);
     }
 

@@ -45,7 +45,7 @@ export class CreateUser {
     this.success.set(false);
 
     if (!name.trim()) errors.push('Name is required.');
-    if (!/^\S+@\S+\.\S+$/.test(email.trim())) errors.push('A valid email is required.');
+    if (!/^[^\s@]+@[^\s@.]+(?:\.[^\s@.]+)+$/.test(email.trim())) errors.push('A valid email is required.');
     if (!username.trim()) errors.push('Username is required.');
     if ((!id || password) && (password.length < 8 || password.length > 16)) {
       errors.push('Password must be between 8 and 16 characters.');

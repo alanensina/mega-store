@@ -1,59 +1,62 @@
-# Frontend
+# Store UI
 
-This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 22.2.1.
+The `ui` directory contains the browser-based storefront and administration interface for Mega Store. It is a single-page application built with Angular 22, TypeScript, and RxJS. The UI communicates with the Customer, Inventory, and Order microservices over HTTP; it does not provide a backend of its own.
 
-## Development server
+## Features
 
-To start a local development server, run:
+- Customer sign-up and login.
+- Product browsing, shopping cart, checkout, and order history, including order cancellation where allowed.
+- Admin pages for managing products, users, and orders.
+- JWT-based authentication. After login, the UI stores the session in browser `sessionStorage` and attaches the token to API requests automatically.
 
-```bash
-ng serve
-```
+The main routes are `/` (login), `/signup`, `/home`, `/cart`, `/myOrders`, and `/admin` with product, user, and order management pages.
 
-Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files.
+## Requirements
 
-## Code scaffolding
+- Node.js compatible with Angular CLI 22 (Node.js 22 or newer is recommended).
+- npm (the project declares npm 12.2.0).
+- The Mega Store backend services for API-backed features:
+  - Inventory on `http://localhost:8080`
+  - Customer on `http://localhost:8081`
+  - Order on `http://localhost:8082`
+- The backend's required infrastructure, such as PostgreSQL and Kafka, as described in the repository's [main README](../README.md).
 
-Angular CLI includes powerful code scaffolding tools. To generate a new component, run:
+The Angular development server proxies API requests, so no UI environment file or direct browser-to-service CORS configuration is needed:
 
-```bash
-ng generate component component-name
-```
+| UI request path | Backend |
+| --- | --- |
+| `/api/product`, `/api/stock` | Inventory (`localhost:8080`) |
+| `/api/cart` | Order (`localhost:8082`) |
+| Other `/api` requests, including authentication and customers | Customer (`localhost:8081`) |
 
-For a complete list of available schematics (such as `components`, `directives`, or `pipes`), run:
+## Run locally
 
-```bash
-ng generate --help
-```
-
-## Building
-
-To build the project run:
-
-```bash
-ng build
-```
-
-This will compile your project and store the build artifacts in the `dist/` directory. By default, the production build optimizes your application for performance and speed.
-
-## Running unit tests
-
-To execute unit tests with the [Vitest](https://vitest.dev/) test runner, use the following command:
+From the repository root:
 
 ```bash
-ng test
+cd ui
+npm ci
+npm start
 ```
 
-## Running end-to-end tests
+Open [http://localhost:4200](http://localhost:4200). Keep the backend services running on the ports listed above to use login, product, cart, order, and administration features.
 
-For end-to-end (e2e) testing, run:
+## Available commands
 
-```bash
-ng e2e
-```
+Run these from `ui/`:
 
-Angular CLI does not come with an end-to-end testing framework by default. You can choose one that suits your needs.
+| Command | Description |
+| --- | --- |
+| `npm start` | Start the Angular development server with the API proxy. |
+| `npm run build` | Build the UI for production. |
+| `npm run watch` | Build in development mode and rebuild when files change. |
+| `npm test` | Run the UI tests. |
 
-## Additional Resources
+## Project structure
 
-For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
+- `src/app/home`, `cart`, `my-orders`, `login`, and `signup` contain the customer-facing pages.
+- `src/app/admin` contains the administration pages.
+- `src/app/app.routes.ts` defines the client-side routes.
+- `src/app/cart.service.ts` manages the cart in browser session storage.
+- `src/app/session.ts` and `src/app/auth.interceptor.ts` manage the login session and authorization header.
+- `proxy.conf.json` routes local API requests to the backend services.

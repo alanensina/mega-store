@@ -14,17 +14,17 @@
     <table>
       <thead>
         <tr>
-          <th>Order #</th>
-          <th>Items</th>
-          <th>Date</th>
-          <th>Status</th>
-          <th class="num">Total</th>
+          <th scope="col">Order #</th>
+          <th scope="col">Items</th>
+          <th scope="col">Date</th>
+          <th scope="col">Status</th>
+          <th scope="col" class="num">Total</th>
         </tr>
       </thead>
       <tbody>
         @for (o of orders(); track o.id) {
-          <tr class="clickable" (click)="open(o)">
-            <td>{{ o.orderNumber }}</td>
+          <tr>
+            <td><button type="button" class="order-btn" (click)="open(o)">Order #{{ o.orderNumber }}</button></td>
             <td>{{ itemCount(o) }}</td>
             <td>{{ o.createdAt | date: 'short' }}</td>
             <td>{{ o.status }}</td>
@@ -41,41 +41,39 @@
 </main>
 
 @if (selected(); as order) {
-  <div class="backdrop" (click)="close()">
-    <div class="dialog details" role="dialog" aria-modal="true" (click)="$event.stopPropagation()">
-      <h2>Order #{{ order.orderNumber }}</h2>
-      <table>
-        <thead>
+  <dialog #orderDialog class="dialog details" aria-labelledby="order-dialog-title" (close)="close()">
+    <h2 id="order-dialog-title">Order #{{ order.orderNumber }}</h2>
+    <table>
+      <thead>
+        <tr>
+          <th scope="col">Item</th>
+          <th scope="col" class="num">Qty</th>
+          <th scope="col" class="num">Unit price</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (i of order.items; track i.productId) {
           <tr>
-            <th>Item</th>
-            <th class="num">Qty</th>
-            <th class="num">Unit price</th>
+            <td>{{ nameOf(i.productId) }}</td>
+            <td class="num">{{ i.quantity }}</td>
+            <td class="num">{{ i.price | currency }}</td>
           </tr>
-        </thead>
-        <tbody>
-          @for (i of order.items; track i.productId) {
-            <tr>
-              <td>{{ nameOf(i.productId) }}</td>
-              <td class="num">{{ i.quantity }}</td>
-              <td class="num">{{ i.price | currency }}</td>
-            </tr>
-          }
-        </tbody>
-        <tfoot>
-          <tr>
-            <th colspan="2">Total</th>
-            <th class="num">{{ order.totalPrice | currency }}</th>
-          </tr>
-        </tfoot>
-      </table>
-      <div class="dialog-actions">
-        @if (canCancel(order)) {
-          <button type="button" class="cancel-btn" [disabled]="cancelling()" (click)="cancel(order)">
-            Cancel order
-          </button>
         }
-        <button type="button" (click)="close()">Close</button>
-      </div>
+      </tbody>
+      <tfoot>
+        <tr>
+          <th scope="row" colspan="2">Total</th>
+          <td class="num">{{ order.totalPrice | currency }}</td>
+        </tr>
+      </tfoot>
+    </table>
+    <div class="dialog-actions">
+      @if (canCancel(order)) {
+        <button type="button" class="cancel-btn" [disabled]="cancelling()" (click)="cancel(order)">
+          Cancel order
+        </button>
+      }
+      <button type="button" (click)="close()">Close</button>
     </div>
-  </div>
+  </dialog>
 }

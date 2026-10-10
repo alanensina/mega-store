@@ -1,5 +1,5 @@
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
-import { Component, inject, signal } from '@angular/core';
+import { Component, effect, ElementRef, inject, signal, viewChild } from '@angular/core';
 import { Router } from '@angular/router';
 import { getCustomer } from '../../session';
 
@@ -26,6 +26,12 @@ export class Users {
   protected readonly error = signal('');
   protected readonly pendingDelete = signal<UserRow | null>(null);
   protected readonly deleting = signal(false);
+  private readonly deleteDialog = viewChild<ElementRef<HTMLDialogElement>>('deleteDialog');
+
+  private readonly showDeleteDialog = effect(() => {
+    const dialog = this.deleteDialog()?.nativeElement;
+    if (dialog && !dialog.open) dialog.showModal();
+  });
 
   constructor() {
     this.http.get<UserRow[]>('/api/customer').subscribe({

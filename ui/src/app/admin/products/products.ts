@@ -1,5 +1,5 @@
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
-import { Component, inject, signal } from '@angular/core';
+import { Component, effect, ElementRef, inject, signal, viewChild } from '@angular/core';
 import { CurrencyPipe } from '@angular/common';
 import { Router } from '@angular/router';
 
@@ -26,6 +26,12 @@ export class Products {
   protected readonly error = signal('');
   protected readonly pendingDelete = signal<ProductRow | null>(null);
   protected readonly deleting = signal(false);
+  private readonly deleteDialog = viewChild<ElementRef<HTMLDialogElement>>('deleteDialog');
+
+  private readonly showDeleteDialog = effect(() => {
+    const dialog = this.deleteDialog()?.nativeElement;
+    if (dialog && !dialog.open) dialog.showModal();
+  });
 
   constructor() {
     this.load();

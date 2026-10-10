@@ -1,5 +1,5 @@
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
-import { Component, inject, signal } from '@angular/core';
+import { Component, effect, ElementRef, inject, signal, viewChild } from '@angular/core';
 import { CurrencyPipe, DatePipe } from '@angular/common';
 
 interface OrderItem {
@@ -31,6 +31,12 @@ export class Orders {
   protected readonly loading = signal(true);
   protected readonly error = signal('');
   protected readonly selected = signal<OrderRow | null>(null);
+  private readonly orderDialog = viewChild<ElementRef<HTMLDialogElement>>('orderDialog');
+
+  private readonly showSelectedDialog = effect(() => {
+    const dialog = this.orderDialog()?.nativeElement;
+    if (dialog && !dialog.open) dialog.showModal();
+  });
 
   constructor() {
     this.http.get<OrderRow[]>('/api/cart').subscribe({
