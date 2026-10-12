@@ -58,6 +58,8 @@ ORDER_DB_PASSWORD=change-me
 NOTIFICATION_DB_USERNAME=notification
 NOTIFICATION_DB_PASSWORD=change-me
 JWT_SECRET=replace-with-a-long-random-secret-shared-by-customer-inventory-and-order
+AWS_REGION=us-east-1
+AWS_S3_BUCKET=your-public-products-bucket
 MAIL_USERNAME=your-account@gmail.com
 MAIL_PASSWORD=your-gmail-app-password
 ```

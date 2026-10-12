@@ -16,6 +16,16 @@
     <input id="quantity" type="number" min="0" step="1" formControlName="quantity" />
   </div>
 
+  @if (!editingId()) {
+    <div class="field">
+      <label for="image">Image</label>
+      <input id="image" type="file" accept="image/*" (change)="onImageSelected($event)" />
+      @if (selectedImageName()) {
+        <small class="hint">{{ selectedImageName() }}</small>
+      }
+    </div>
+  }
+
   <label class="check">
     <input type="checkbox" formControlName="active" /> Active
   </label>

@@ -37,6 +37,9 @@ class ProductServiceTest {
     @Mock
     private StockRepository stockRepository;
 
+    @Mock
+    private ProductImageStorageService productImageStorageService;
+
     @InjectMocks
     private ProductService productService;
 
@@ -63,6 +66,7 @@ class ProductServiceTest {
         assertEquals(productId, result.id());
         assertEquals("Keyboard", result.name());
         assertTrue(result.active());
+        assertNull(result.imageUrl());
         verify(productRepository).save(any(Product.class));
         ArgumentCaptor<Product> captor = ArgumentCaptor.forClass(Product.class);
         verify(productRepository).save(captor.capture());
@@ -74,6 +78,28 @@ class ProductServiceTest {
         verify(stockRepository).save(stockCaptor.capture());
         assertEquals(5, stockCaptor.getValue().getQuantity());
         assertEquals(saved, stockCaptor.getValue().getProduct());
+    }
+
+    @Test
+    void createShouldUploadImageAndStoreUrl() {
+        var image = new org.springframework.mock.web.MockMultipartFile("image", "a.png", "image/png", new byte[]{1});
+        when(productImageStorageService.uploadProductImage(image)).thenReturn("https://s3/a.png");
+        when(productRepository.save(any(Product.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        ProductDTO result = productService.create(new CreateProductDTO("Keyboard", BigDecimal.TEN, true, 5), image);
+
+        assertEquals("https://s3/a.png", result.imageUrl());
+    }
+
+    @Test
+    void createShouldSkipUploadWhenImageIsEmpty() {
+        var empty = new org.springframework.mock.web.MockMultipartFile("image", new byte[0]);
+        when(productRepository.save(any(Product.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        ProductDTO result = productService.create(new CreateProductDTO("Keyboard", BigDecimal.TEN, true, 5), empty);
+
+        assertNull(result.imageUrl());
+        verifyNoInteractions(productImageStorageService);
     }
 
     @Test

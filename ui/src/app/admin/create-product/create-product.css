@@ -56,6 +56,10 @@ h1 {
   border-color: var(--accent-1);
 }
 
+.hint {
+  font-size: 0.75rem;
+}
+
 .check {
   display: flex;
   align-items: center;

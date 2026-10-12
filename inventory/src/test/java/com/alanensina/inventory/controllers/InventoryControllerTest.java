@@ -22,17 +22,21 @@ class InventoryControllerTest {
         ProductService service = mock(ProductService.class);
         ProductController controller = new ProductController(service);
         UUID id = UUID.randomUUID();
-        ProductDTO product = new ProductDTO(id, "Keyboard", BigDecimal.TEN, true, LocalDateTime.now(), LocalDateTime.now());
+        ProductDTO product = new ProductDTO(id, "Keyboard", BigDecimal.TEN, null, true, LocalDateTime.now(),
+                LocalDateTime.now());
         List<ProductDTO> products = List.of(product);
         CreateProductDTO create = new CreateProductDTO("Keyboard", BigDecimal.TEN, true, 5);
         UpdateProductDTO update = new UpdateProductDTO(id, "Keyboard", false);
         when(service.create(create)).thenReturn(product);
         when(service.listAllProducts()).thenReturn(products);
         when(service.getProductDTOById(id)).thenReturn(product);
+        var image = new org.springframework.mock.web.MockMultipartFile("image", new byte[]{1});
+        when(service.create(create, image)).thenReturn(product);
         when(service.updateProduct(update)).thenReturn(product);
         when(service.deleteById(id)).thenReturn(product);
 
         assertSame(product, controller.create(create).getBody());
+        assertSame(product, controller.createWithImage(create, image).getBody());
         assertSame(products, controller.list().getBody());
         assertSame(product, controller.getProductByID(id).getBody());
         assertSame(product, controller.updateProduct(update).getBody());

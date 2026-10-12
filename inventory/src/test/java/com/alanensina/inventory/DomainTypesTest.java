@@ -25,7 +25,7 @@ class DomainTypesTest {
         UUID id = UUID.randomUUID();
         LocalDateTime now = LocalDateTime.of(2024, 1, 2, 10, 30);
         var createProduct = new CreateProductDTO("Keyboard", BigDecimal.TEN, true, 5);
-        var product = new ProductDTO(id, "Keyboard", BigDecimal.TEN, true, now, now);
+        var product = new ProductDTO(id, "Keyboard", BigDecimal.TEN, null, true, now, now);
         var updateProduct = new UpdateProductDTO(id, "Keyboard", true);
 
         assertAll(
@@ -44,7 +44,7 @@ class DomainTypesTest {
         assertEquals(new CreateProductDTO("Keyboard", BigDecimal.TEN, true, 5), createProduct);
         assertEquals(createProduct.hashCode(), new CreateProductDTO("Keyboard", BigDecimal.TEN, true, 5).hashCode());
         assertNotNull(createProduct.toString());
-        assertEquals(new ProductDTO(id, "Keyboard", BigDecimal.TEN, true, now, now), product);
+        assertEquals(new ProductDTO(id, "Keyboard", BigDecimal.TEN, null, true, now, now), product);
         assertNotNull(product.toString());
         assertEquals(new UpdateProductDTO(id, "Keyboard", true), updateProduct);
         assertNotNull(updateProduct.toString());
@@ -153,7 +153,7 @@ class DomainTypesTest {
 
         Product product = Product.builder().id(id).name("Keyboard").price(BigDecimal.TEN).active(true)
                 .createdAt(now).updatedAt(now).build();
-        Product sameProduct = new Product(id, "Keyboard", BigDecimal.TEN, true, now, now);
+        Product sameProduct = new Product(id, "Keyboard", BigDecimal.TEN, null, true, now, now);
         assertEquals(product, sameProduct);
         assertEquals(product.hashCode(), sameProduct.hashCode());
         assertTrue(product.toString().contains("Keyboard"));
@@ -218,6 +218,10 @@ class DomainTypesTest {
         assertEquals("Invalid order event type: UNKNOWN",
                 new InvalidKafkaOrderEventTypeException("UNKNOWN").getMessage());
         assertEquals("Error processing Kafka message: failed", new KafkaErrorException("failed").getMessage());
+        assertEquals("Product image is required.", new ImageIsMandatoryException().getMessage());
+        assertEquals("Only image files are accepted.", new InvalidImageTypeException().getMessage());
+        assertEquals("Could not read product image from S3 bucket.", new ReadImageErrorException().getMessage());
+        assertEquals("Could not upload product image to S3 bucket.", new UploadImageErrorException().getMessage());
         assertEquals("Failed to configure Spring Security Chain: failed",
                 new SecurityFilterChainFailedException("failed").getMessage());
     }

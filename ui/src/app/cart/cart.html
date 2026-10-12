@@ -18,7 +18,11 @@
     <section class="grid">
       @for (i of cart.items(); track i.productId) {
         <article class="product">
-          <div class="image-placeholder" aria-hidden="true"></div>
+          @if (i.imageUrl) {
+            <img class="product-image" [src]="i.imageUrl" [alt]="i.name" loading="lazy" />
+          } @else {
+            <div class="image-placeholder" aria-hidden="true"></div>
+          }
           <h2>{{ i.name }}</h2>
           <p class="price">{{ i.price | currency }}</p>
           <div class="buy">

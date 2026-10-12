@@ -20,6 +20,8 @@ export class CreateProduct {
   protected readonly submitting = signal(false);
   protected readonly success = signal(false);
   protected readonly errors = signal<string[]>([]);
+  protected readonly selectedImageName = signal('');
+  private selectedImage: File | null = null;
 
   protected readonly form = this.fb.nonNullable.group({
     name: [''],
@@ -65,9 +67,20 @@ export class CreateProduct {
 
     this.submitting.set(true);
     const id = this.editingId();
+    if (!id && !this.selectedImage) {
+      this.submitting.set(false);
+      this.errors.set(['Image is required when creating a product.']);
+      return;
+    }
+
+    if (price === null || quantity === null) {
+      this.submitting.set(false);
+      this.errors.set(['Price and quantity are required.']);
+      return;
+    }
     const request = id
       ? this.http.put('/api/product', { id, name: name.trim(), price, active, quantity })
-      : this.http.post('/api/product', { name: name.trim(), price, active, quantity });
+      : this.createWithImage(name.trim(), price, active, quantity);
     request.subscribe({
       next: () => {
         this.submitting.set(false);
@@ -87,8 +100,17 @@ export class CreateProduct {
 
   protected clean(): void {
     this.form.reset({ name: '', price: null, active: true, quantity: null });
+    this.selectedImage = null;
+    this.selectedImageName.set('');
     this.errors.set([]);
     this.success.set(false);
+  }
+
+  protected onImageSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0] ?? null;
+    this.selectedImage = file;
+    this.selectedImageName.set(file?.name ?? '');
   }
 
   protected cancel(): void {
@@ -101,5 +123,17 @@ export class CreateProduct {
     if (typeof body === 'string' && body) return body;
     if (body?.message) return body.message;
     return 'Could not save the product.';
+  }
+
+  private createWithImage(name: string, price: number, active: boolean, quantity: number) {
+    const formData = new FormData();
+    formData.append('name', name);
+    formData.append('price', String(price));
+    formData.append('active', String(active));
+    formData.append('quantity', String(quantity));
+    if (this.selectedImage) {
+      formData.append('image', this.selectedImage);
+    }
+    return this.http.post('/api/product', formData);
   }
 }

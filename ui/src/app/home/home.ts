@@ -9,6 +9,7 @@ interface Product {
   id: string;
   name: string;
   price: number;
+  imageUrl: string | null;
   active: boolean;
 }
 
@@ -57,7 +58,7 @@ export class Home implements OnInit {
   }
 
   protected addToCart(product: Product): void {
-    this.cart.add({ productId: product.id, name: product.name, price: product.price }, this.quantity(product.id));
+    this.cart.add({ productId: product.id, name: product.name, price: product.price, imageUrl: product.imageUrl }, this.quantity(product.id));
     this.setQuantity(product.id, 1);
     this.added.set(product.name);
     setTimeout(() => this.added() === product.name && this.added.set(''), 3000);

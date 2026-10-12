@@ -34,7 +34,11 @@
   <section class="grid">
     @for (p of products(); track p.id) {
       <article class="product">
-        <div class="image-placeholder" aria-hidden="true"></div>
+        @if (p.imageUrl) {
+          <img class="product-image" [src]="p.imageUrl" [alt]="p.name" loading="lazy" />
+        } @else {
+          <div class="image-placeholder" aria-hidden="true"></div>
+        }
         <h2>{{ p.name }}</h2>
         <p class="price">{{ p.price | currency }}</p>
         <div class="buy">

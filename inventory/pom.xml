@@ -28,6 +28,7 @@
 	</scm>
 	<properties>
 		<java.version>26</java.version>
+		<aws.sdk.version>2.32.29</aws.sdk.version>
 	</properties>
 	<dependencies>
 		<dependency>
@@ -107,6 +108,11 @@
 			<groupId>com.auth0</groupId>
 			<artifactId>java-jwt</artifactId>
 			<version>4.4.0</version>
+		</dependency>
+		<dependency>
+			<groupId>software.amazon.awssdk</groupId>
+			<artifactId>s3</artifactId>
+			<version>${aws.sdk.version}</version>
 		</dependency>
 	</dependencies>
 

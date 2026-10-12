@@ -14,6 +14,7 @@ import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -27,16 +28,26 @@ public class ProductService {
 
     private final ProductRepository productRepository;
     private final StockRepository stockRepository;
+    private final ProductImageStorageService productImageStorageService;
 
     @Transactional
     public ProductDTO create(CreateProductDTO productDTO) {
+        return create(productDTO, null);
+    }
+
+    @Transactional
+    public ProductDTO create(CreateProductDTO productDTO, MultipartFile image) {
 
         validateProductName(productDTO.name());
 
         var now = LocalDateTime.now(ZoneId.systemDefault());
+        var imageUrl = image != null && !image.isEmpty()
+                ? productImageStorageService.uploadProductImage(image)
+                : null;
         var newProduct = Product.builder()
                 .name(productDTO.name())
                 .price(productDTO.price())
+                .imageUrl(imageUrl)
                 .active(productDTO.active())
                 .createdAt(now)
                 .updatedAt(now)
@@ -86,6 +97,7 @@ public class ProductService {
                 .id(productDTO.id())
                 .name(productDTO.name())
                 .price(productDTO.price() != null ? productDTO.price() : product.price())
+                .imageUrl(product.imageUrl())
                 .active(productDTO.active())
                 .createdAt(product.createdAt())
                 .updatedAt(LocalDateTime.now(ZoneId.systemDefault()))
@@ -119,6 +131,7 @@ public class ProductService {
                 product.getId(),
                 product.getName(),
                 product.getPrice(),
+                product.getImageUrl(),
                 product.isActive(),
                 product.getCreatedAt(),
                 product.getUpdatedAt()

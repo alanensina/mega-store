@@ -19,7 +19,7 @@ Inventory manages Mega Store's product catalogue and stock. It also consumes ord
 - Java 26, Spring Boot, Spring Data JPA, Spring Kafka, and Maven
 - PostgreSQL at `localhost:5433`, database `inventory-service`
 - Kafka at `localhost:9094`, consuming the `orders_topic` topic
-- Environment variables: `INVENTORY_DB_USERNAME`, `INVENTORY_DB_PASSWORD`, and `JWT_SECRET`
+- Environment variables: `INVENTORY_DB_USERNAME`, `INVENTORY_DB_PASSWORD`, `JWT_SECRET`, `AWS_REGION`, and `AWS_S3_BUCKET`
 
 Start PostgreSQL and Kafka with Docker Compose from the repository root. See the [project README](../README.md) for complete setup details. Flyway applies migrations on startup.
 
@@ -61,7 +61,7 @@ Reservations are created, updated, and cancelled from consumed Order events; thi
 
 ### Create a product
 
-Product creation includes its initial price and inventory quantity:
+Product creation includes its initial price and inventory quantity. JSON is still accepted, and you can also send `multipart/form-data` with an `image` file to upload to S3.
 
 ```http
 POST /api/product
@@ -78,7 +78,7 @@ Authorization: Bearer <jwt-token>
 }
 ```
 
-Names are unique without regard to case. Price and quantity cannot be negative. When updating a product, `price` and `quantity` may be omitted to keep their current values.
+Names are unique without regard to case. Price and quantity cannot be negative. When an image is provided, Inventory uploads it to S3 and stores the URL in `imageUrl`. When updating a product, `price` and `quantity` may be omitted to keep their current values.
 
 ## Kafka order processing
 
