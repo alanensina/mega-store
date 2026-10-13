@@ -19,21 +19,14 @@
       @for (i of cart.items(); track i.productId) {
         <article class="product">
           @if (i.imageUrl) {
-            <img class="product-image" [src]="i.imageUrl" [alt]="i.name" loading="lazy" />
+            <img class="product-image" [src]="i.imageUrl" [alt]="i.name" loading="lazy" (click)="openImage(i, $event)" />
           } @else {
             <div class="image-placeholder" aria-hidden="true"></div>
           }
           <h2>{{ i.name }}</h2>
           <p class="price">{{ i.price | currency }}</p>
           <div class="buy">
-            <input
-              type="number"
-              min="1"
-              step="1"
-              [attr.aria-label]="'Quantity of ' + i.name"
-              [value]="i.quantity"
-              (change)="setQuantity(i.productId, +$any($event.target).value)"
-            />
+            <app-quantity-stepper [label]="i.name" [value]="i.quantity" (valueChange)="setQuantity(i.productId, $event)" />
             <button
               type="button"
               class="logout-btn icon-btn"
@@ -64,5 +57,21 @@
         {{ buying() ? 'Processing...' : 'Buy' }}
       </button>
     </footer>
+  }
+
+  @if (preview(); as img) {
+    <div class="lightbox" role="presentation" (click)="closeImage()">
+      <div
+        class="popup"
+        role="dialog"
+        [attr.aria-label]="img.name"
+        [style.top.px]="img.top"
+        [style.left.px]="img.left"
+        (click)="$event.stopPropagation()"
+      >
+        <button type="button" class="popup-close" aria-label="Close image" (click)="closeImage()">×</button>
+        <img [src]="img.url" [alt]="img.name" />
+      </div>
+    </div>
   }
 </main>
