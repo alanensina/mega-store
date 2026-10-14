@@ -75,7 +75,7 @@ public class CartService {
             }
 
             cart.setTotalPrice(totalPrice);
-            cart = cartRepository.save(cart);
+            cart = cartRepository.saveAndFlush(cart);
             log.info("Cart created with ID: {}", cart.getId());
 
             outboxService.addOrderEvent(createOrderEventDTO(cart, OrderEventType.CREATE));

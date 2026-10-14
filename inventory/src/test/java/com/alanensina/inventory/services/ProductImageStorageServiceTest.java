@@ -78,14 +78,14 @@ class ProductImageStorageServiceTest {
     @Test
     void uploadShouldRejectNullOrEmptyImage() {
         assertThrows(ImageIsMandatoryException.class, () -> service.uploadProductImage(null));
-        assertThrows(ImageIsMandatoryException.class,
-                () -> service.uploadProductImage(new MockMultipartFile("image", new byte[0])));
+        var emptyImage = new MockMultipartFile("image", new byte[0]);
+        assertThrows(ImageIsMandatoryException.class, () -> service.uploadProductImage(emptyImage));
     }
 
     @Test
     void uploadShouldRejectNonImageOrMissingContentType() {
-        assertThrows(InvalidImageTypeException.class, () -> service.uploadProductImage(
-                new MockMultipartFile("image", "a.txt", "text/plain", new byte[]{1})));
+        var textFile = new MockMultipartFile("image", "a.txt", "text/plain", new byte[]{1});
+        assertThrows(InvalidImageTypeException.class, () -> service.uploadProductImage(textFile));
         MultipartFile noType = mock(MultipartFile.class);
         when(noType.getContentType()).thenReturn(null);
         assertThrows(InvalidImageTypeException.class, () -> service.uploadProductImage(noType));

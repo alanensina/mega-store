@@ -77,7 +77,7 @@ class CartServiceTest {
 
     @Test
     void createCalculatesTotalAndEmitsOrderAndNotificationEvents() {
-        when(cartRepository.save(any(Cart.class))).thenAnswer(invocation -> {
+        when(cartRepository.saveAndFlush(any(Cart.class))).thenAnswer(invocation -> {
             Cart savedCart = invocation.getArgument(0);
             savedCart.setId(cartId);
             return savedCart;
@@ -93,7 +93,7 @@ class CartServiceTest {
         }
 
         ArgumentCaptor<Cart> cartCaptor = ArgumentCaptor.forClass(Cart.class);
-        verify(cartRepository).save(cartCaptor.capture());
+        verify(cartRepository).saveAndFlush(cartCaptor.capture());
         assertEquals(cartId, cartCaptor.getValue().getItems().getFirst().getCart().getId());
         ArgumentCaptor<OrderEventDTO> eventCaptor = ArgumentCaptor.forClass(OrderEventDTO.class);
         verify(outboxService).addOrderEvent(eventCaptor.capture());
