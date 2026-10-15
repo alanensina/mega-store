@@ -52,6 +52,8 @@ Run these from `ui/`:
 | `npm run watch` | Build in development mode and rebuild when files change. |
 | `npm test` | Run the UI tests. |
 
+The unit tests cover cart state and persistence, session storage, authorization headers, and the quantity stepper component. They run with Vitest in a jsdom environment.
+
 ## Project structure
 
 - `src/app/home`, `cart`, `my-orders`, `login`, and `signup` contain the customer-facing pages.
