@@ -35,7 +35,14 @@
     @for (p of products(); track p.id) {
       <article class="product">
         @if (p.imageUrl) {
-          <img class="product-image" [src]="p.imageUrl" [alt]="p.name" loading="lazy" (click)="openImage(p, $event)" />
+          <button
+            type="button"
+            class="image-trigger"
+            [attr.aria-label]="'Open image of ' + p.name"
+            (click)="openImage(p, $event)"
+          >
+            <img class="product-image" [src]="p.imageUrl" alt="" aria-hidden="true" loading="lazy" />
+          </button>
         } @else {
           <div class="image-placeholder" aria-hidden="true"></div>
         }
@@ -58,18 +65,16 @@
   </section>
 
   @if (preview(); as img) {
-    <div class="lightbox" role="presentation" (click)="closeImage()">
-      <div
+    <button type="button" class="lightbox" aria-label="Close image preview" (click)="closeImage()"></button>
+      <dialog
         class="popup"
-        role="dialog"
+        open
         [attr.aria-label]="img.name"
         [style.top.px]="img.top"
         [style.left.px]="img.left"
-        (click)="$event.stopPropagation()"
       >
         <button type="button" class="popup-close" aria-label="Close image" (click)="closeImage()">×</button>
         <img [src]="img.url" [alt]="img.name" />
-      </div>
-    </div>
+      </dialog>
   }
 </main>
