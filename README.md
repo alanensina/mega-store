@@ -35,11 +35,16 @@ Each backend has an independent PostgreSQL database. Kafka runs locally on `loca
 
 The UI has its own [README](ui/README.md), including its local development server and API proxy configuration.
 
+## Product images
+
+Inventory uploads product images to the AWS S3 bucket configured with `AWS_REGION` and `AWS_S3_BUCKET`, then saves the resulting image URL with the product. The UI uses that URL to show images in the storefront and cart. Configure AWS credentials through the AWS SDK's default credentials provider, and ensure browsers can retrieve objects from the bucket.
+
 ## Requirements
 
 - JDK 26
 - Docker Compose for local PostgreSQL and Kafka
 - Node.js compatible with Angular 22 and npm to run the UI
+- AWS credentials with permission to upload product images to the configured S3 bucket
 - A Gmail account with an App Password, or another compatible SMTP setup, to deliver emails
 
 ## Run locally
@@ -127,6 +132,8 @@ Each service is an independent Maven project. For example, from the repository r
 ```
 
 Run the corresponding wrapper under `customer/`, `order/`, or `notification/` to build or test those services. For the UI, run `npm run build` or `npm test` from `ui/`.
+
+Inventory tests cover product, stock, and reservation services; controller and Kafka consumer behavior; JWT security; and S3 image upload and validation. UI tests cover cart state and persistence, session storage, authorization headers, and the quantity stepper.
 
 ## Repository layout
 

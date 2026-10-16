@@ -6,7 +6,8 @@ The `ui` directory contains the browser-based storefront and administration inte
 
 - Customer sign-up and login.
 - Product browsing, shopping cart, checkout, and order history, including order cancellation where allowed.
-- Admin pages for managing products, users, and orders.
+- Admin pages for managing products, users, and orders. Product creation uploads an image through Inventory to AWS S3.
+- Product images are displayed in the storefront and cart, with an image preview when selected.
 - JWT-based authentication. After login, the UI stores the session in browser `sessionStorage` and attaches the token to API requests automatically.
 
 The main routes are `/` (login), `/signup`, `/home`, `/cart`, `/myOrders`, and `/admin` with product, user, and order management pages.
@@ -41,6 +42,8 @@ npm start
 
 Open [http://localhost:4200](http://localhost:4200). Keep the backend services running on the ports listed above to use login, product, cart, order, and administration features.
 
+When creating a product in the admin interface, select an image file. Inventory uploads it to the configured S3 bucket and returns the URL used to display the image. See the [Inventory README](../inventory/README.md) for S3 configuration and upload requirements.
+
 ## Available commands
 
 Run these from `ui/`:
@@ -52,7 +55,7 @@ Run these from `ui/`:
 | `npm run watch` | Build in development mode and rebuild when files change. |
 | `npm test` | Run the UI tests. |
 
-The unit tests cover cart state and persistence, session storage, authorization headers, and the quantity stepper component. They run with Vitest in a jsdom environment.
+The unit tests cover cart state and persistence, session storage, authorization headers, and the quantity stepper component. They run with Vitest in a jsdom environment. Product image upload is handled by Inventory; see its README for the backend's S3 upload tests.
 
 ## Project structure
 
