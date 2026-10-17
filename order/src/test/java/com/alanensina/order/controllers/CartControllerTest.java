@@ -24,12 +24,12 @@ class CartControllerTest {
     void createsCart() {
         CreateCartDTO request = new CreateCartDTO(UUID.randomUUID(), List.of());
         CartDTO cart = mock(CartDTO.class);
-        when(cartService.create(request)).thenReturn(cart);
+        when(cartService.create(request, "idem-key")).thenReturn(cart);
 
-        ResponseEntity<CartDTO> response = controller.create(request);
+        ResponseEntity<CartDTO> response = controller.create("idem-key", request);
 
         assertSame(cart, response.getBody());
-        verify(cartService).create(request);
+        verify(cartService).create(request, "idem-key");
     }
 
     @Test

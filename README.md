@@ -19,10 +19,12 @@ Each backend has an independent PostgreSQL database. Kafka runs locally on `loca
 ## How an order flows through the system
 
 1. A customer signs in through Customer and receives a JWT. The UI sends it to protected APIs as a Bearer token.
-2. The UI submits a cart to Order. Order fetches customer details from Customer, forwarding the caller's JWT.
+2. The UI submits a cart to Order. Order fetches customer details from Customer, forwarding the caller's JWT with timeout, retry, and circuit-breaker protection.
 3. In one database transaction, Order saves the cart and corresponding outbox events. A scheduled publisher sends pending events to Kafka, retrying failures with backoff.
 4. Inventory consumes order events to create, update, or cancel stock reservations. It records processed event IDs to avoid applying duplicate deliveries twice. Transient consumer failures are retried; exhausted records are routed to a dead-letter topic.
 5. Notification consumes order email events and uses SMTP to send new-order or cancellation messages. Delivery records and temporary leases help suppress duplicate processing and coordinate retries.
+
+Order cart creation also supports an `Idempotency-Key` header to prevent duplicate order creation on client retries.
 
 ## Services
 

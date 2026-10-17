@@ -17,6 +17,7 @@ export class Cart implements OnInit {
   private readonly router = inject(Router);
   protected readonly cart = inject(CartService);
   private readonly customer = getCustomer();
+  private checkout: { signature: string; key: string } | null = null;
 
   protected readonly buying = signal(false);
   protected readonly error = signal('');
@@ -64,8 +65,10 @@ export class Cart implements OnInit {
       quantity: i.quantity,
       price: i.price,
     }));
-    this.http.post('/api/cart', { customerId: this.customer.id, items }).subscribe({
+    const body = { customerId: this.customer.id, items };
+    this.http.post('/api/cart', body, { headers: { 'Idempotency-Key': this.idempotencyKeyFor(body) } }).subscribe({
       next: () => {
+        this.checkout = null;
         this.buying.set(false);
         this.cart.clear();
         this.success.set(true);
@@ -75,5 +78,14 @@ export class Cart implements OnInit {
         this.error.set(err.status === 0 ? 'Unable to reach the server.' : 'Could not complete the purchase.');
       },
     });
+  }
+
+  // Retries of the same cart content reuse the key so the server never creates a duplicate order.
+  private idempotencyKeyFor(body: object): string {
+    const signature = JSON.stringify(body);
+    if (this.checkout?.signature !== signature) {
+      this.checkout = { signature, key: crypto.randomUUID() };
+    }
+    return this.checkout.key;
   }
 }

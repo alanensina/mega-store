@@ -19,6 +19,15 @@ public class EmailService {
     @Value(value = "${spring.mail.username}")
     private String senderName;
 
+    @Value("${notification.email.retry.max-attempts:3}")
+    private int maxAttempts;
+
+    @Value("${notification.email.retry.initial-delay-ms:1000}")
+    private long retryInitialDelayMs;
+
+    @Value("${notification.email.retry.max-delay-ms:5000}")
+    private long retryMaxDelayMs;
+
     public EmailService(JavaMailSender sender) {
         this.sender = sender;
     }
@@ -40,16 +49,49 @@ public class EmailService {
     }
 
     private void sendEmail(NotificationDTO event, String subject, String text) {
-        try {
-            SimpleMailMessage message = new SimpleMailMessage();
-            message.setTo(event.email());
-            message.setSubject(subject);
-            message.setText(text);
-            sender.send(message);
-        } catch (Exception e) {
-            log.error("Error sending email: {}", e.getMessage());
-            throw new EmailErrorException(e.getMessage());
+        SimpleMailMessage message = new SimpleMailMessage();
+        message.setTo(event.email());
+        message.setSubject(subject);
+        message.setText(text);
+        message.setFrom(senderName);
+
+        int totalAttempts = Math.max(1, maxAttempts);
+        RuntimeException lastException = null;
+
+        for (int attempt = 1; attempt <= totalAttempts; attempt++) {
+            try {
+                sender.send(message);
+                return;
+            } catch (RuntimeException ex) {
+                lastException = ex;
+                if (attempt < totalAttempts) {
+                    log.warn("Email send failed on attempt {}/{}. Retrying.", attempt, totalAttempts);
+                    sleepBeforeRetry(attempt);
+                }
+            }
         }
+
+        if (lastException != null) {
+            log.error("Error sending email after {} attempts: {}", totalAttempts, lastException.getMessage());
+            throw new EmailErrorException(lastException.getMessage());
+        }
+    }
+
+    private void sleepBeforeRetry(int attempt) {
+        try {
+            Thread.sleep(backoffDelayMs(attempt));
+        } catch (InterruptedException ex) {
+            Thread.currentThread().interrupt();
+            throw new EmailErrorException("Email retry interrupted.");
+        }
+    }
+
+    private long backoffDelayMs(int attempt) {
+        long initialDelay = Math.max(1L, retryInitialDelayMs);
+        long maxDelay = Math.max(initialDelay, retryMaxDelayMs);
+        long shift = Math.max(0, attempt - 1);
+        long delay = initialDelay << Math.min(shift, 30);
+        return Math.min(delay, maxDelay);
     }
 
     private static @NonNull String getNewOrderSubject(NotificationDTO event) {

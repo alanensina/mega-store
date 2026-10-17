@@ -13,14 +13,12 @@ import jakarta.validation.constraints.NotNull;
 import lombok.extern.slf4j.Slf4j;
 import com.alanensina.order.exceptions.CustomerDetailsFetchException;
 import org.jspecify.annotations.NonNull;
-import org.springframework.stereotype.Service;
 import org.springframework.http.HttpHeaders;
+import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
-import org.springframework.web.client.RestClient;
-import org.springframework.web.client.RestClientException;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -35,19 +33,39 @@ public class CartService {
 
     private final CartRepository cartRepository;
     private final OutboxService outboxService;
+    private final CustomerApiClient customerApiClient;
+    private final CartIdempotencyService cartIdempotencyService;
     private final TransactionTemplate transactionTemplate;
-    private static final String CUSTOMER_API_URL = "http://localhost:8081";
 
     public CartService(
             CartRepository cartRepository,
             OutboxService outboxService,
+            CustomerApiClient customerApiClient,
+            CartIdempotencyService cartIdempotencyService,
             PlatformTransactionManager transactionManager) {
         this.cartRepository = cartRepository;
         this.outboxService = outboxService;
+        this.customerApiClient = customerApiClient;
+        this.cartIdempotencyService = cartIdempotencyService;
         this.transactionTemplate = new TransactionTemplate(transactionManager);
     }
 
     public CartDTO create(@Valid CreateCartDTO cartDTO) {
+        return create(cartDTO, null);
+    }
+
+    public CartDTO create(@Valid CreateCartDTO cartDTO, String idempotencyKey) {
+        if (idempotencyKey == null || idempotencyKey.isBlank()) {
+            return createInternal(cartDTO);
+        }
+        return cartIdempotencyService.executeOrReplay(
+                idempotencyKey,
+                () -> createInternal(cartDTO),
+                this::getOrderDTOById
+        );
+    }
+
+    private CartDTO createInternal(@Valid CreateCartDTO cartDTO) {
         var customer = getCustomerDetails(cartDTO.customerId());
 
         return transactionTemplate.execute(status -> {
@@ -202,18 +220,8 @@ public class CartService {
             var authorization = requestAttributes instanceof ServletRequestAttributes servletAttributes
                     ? servletAttributes.getRequest().getHeader(HttpHeaders.AUTHORIZATION)
                     : null;
-
-            return RestClient.create(CUSTOMER_API_URL)
-                    .get()
-                    .uri("/api/customer/{id}", uuid)
-                    .headers(headers -> {
-                        if (authorization != null) {
-                            headers.set(HttpHeaders.AUTHORIZATION, authorization);
-                        }
-                    })
-                    .retrieve()
-                    .body(CustomerDTO.class);
-        } catch (RestClientException ex) {
+            return customerApiClient.fetchCustomer(uuid, authorization);
+        } catch (RuntimeException ex) {
             throw new CustomerDetailsFetchException(uuid, ex);
         }
     }

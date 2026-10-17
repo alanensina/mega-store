@@ -7,10 +7,12 @@ Order provides the cart and order API for Mega Store. It persists each cart and 
 - Create, list, fetch, update, and cancel carts/orders.
 - Calculate and persist order totals and expose a sequential `orderNumber` alongside each order UUID.
 - Fetch customer name and email from Customer for notifications, forwarding the caller's JWT.
+- Support idempotent order creation with the optional `Idempotency-Key` header on `POST /api/cart`.
 - Save Kafka event payloads in an outbox within the same database transaction as the order change.
 - Publish pending outbox events on a schedule, with configurable exponential retry delays and a maximum attempt count.
 - Initialize the configured Kafka topics on service startup and track initialization in the database.
 - Use optimistic locking to detect conflicting order updates and return `409 Conflict`.
+- Apply retry, timeout, and circuit-breaker protection when calling Customer synchronously.
 - Apply database migrations automatically through Flyway.
 
 ## Technology and local dependencies
@@ -65,6 +67,14 @@ Create request example:
 }
 ```
 
+`POST /api/cart` accepts an optional idempotency header:
+
+```http
+Idempotency-Key: <unique-key-per-request>
+```
+
+When the same key is reused by the same authenticated user, the service returns the already created order instead of creating a duplicate.
+
 The response includes the order UUID, sequential `orderNumber`, customer UUID, total price, status, timestamps, and item list. The service records an order event for Inventory and a notification event for Notification when an order is created. Cancellation records corresponding cancel events. Updates publish an order event for Inventory.
 
 Swagger UI: [http://localhost:8082/swagger-ui](http://localhost:8082/swagger-ui)
@@ -90,6 +100,18 @@ Events that reach the attempt limit remain unpublished in the outbox for investi
 Order validates Customer-issued JWTs locally. Set `JWT_SECRET` to the same value used by Customer and Inventory. When Order calls `GET /api/customer/{id}`, it forwards the original request's `Authorization` header.
 
 Database credentials are configured with `ORDER_DB_USERNAME` and `ORDER_DB_PASSWORD`. Kafka defaults to `localhost:9094`; topic names can be configured with `spring.kafka.orders.topic.name` and `spring.kafka.orders.notification.topic.name`.
+
+Customer API resilience is configurable with:
+
+| Property | Default | Purpose |
+| --- | ---: | --- |
+| `order.customer.base-url` | `http://localhost:8081` | Customer service base URL |
+| `order.customer.timeout-ms` | `2000` | Per-call timeout |
+| `order.customer.retry.max-attempts` | `3` | Max retries for transient failures |
+| `order.customer.retry.initial-delay-ms` | `200` | Initial retry backoff |
+| `order.customer.retry.max-delay-ms` | `2000` | Retry backoff cap |
+| `order.customer.circuit.failure-threshold` | `4` | Consecutive failures before opening circuit |
+| `order.customer.circuit.open-duration-ms` | `30000` | Circuit open interval |
 
 ## Build and test
 

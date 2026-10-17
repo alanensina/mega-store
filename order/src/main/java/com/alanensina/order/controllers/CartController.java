@@ -20,8 +20,11 @@ public class CartController {
     private final CartService cartService;
 
     @PostMapping
-    public ResponseEntity<CartDTO> create(@Valid @RequestBody CreateCartDTO cartDTO) {
-        return ResponseEntity.ok(cartService.create(cartDTO));
+    public ResponseEntity<CartDTO> create(
+            @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey,
+            @Valid @RequestBody CreateCartDTO cartDTO
+    ) {
+        return ResponseEntity.ok(cartService.create(cartDTO, idempotencyKey));
     }
 
     @GetMapping

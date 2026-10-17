@@ -21,6 +21,7 @@ The main consumer is `OrderConsumer`, which listens to the topic configured in `
 - `CANCEL`: sends a cancellation e-mail
 
 The e-mail content is composed by `EmailService`, which uses Spring Mail to send plain-text messages.
+When SMTP delivery fails, the service retries sends with exponential backoff before surfacing an error.
 
 ## Main responsibilities
 
@@ -29,6 +30,7 @@ The e-mail content is composed by `EmailService`, which uses Spring Mail to send
 - Build order and cancellation messages
 - Send e-mails via Gmail SMTP
 - Log processing failures and unsupported events
+- Retry transient SMTP failures with bounded exponential backoff
 
 ## Tech stack
 
@@ -103,6 +105,10 @@ spring.kafka.bootstrap-servers=localhost:9094
 spring.kafka.consumer.group-id=notification
 spring.kafka.consumer.auto-offset-reset=earliest
 spring.kafka.topic.name=orders_notification
+
+notification.email.retry.max-attempts=3
+notification.email.retry.initial-delay-ms=1000
+notification.email.retry.max-delay-ms=5000
 ```
 
 Important:
