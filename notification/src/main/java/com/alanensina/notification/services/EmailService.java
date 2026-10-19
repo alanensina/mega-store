@@ -10,6 +10,8 @@ import org.springframework.stereotype.Service;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.Objects;
+
 @Service
 public class EmailService {
 
@@ -71,16 +73,15 @@ public class EmailService {
             }
         }
 
-        if (lastException != null) {
-            log.error("Error sending email after {} attempts: {}", totalAttempts, lastException.getMessage());
-            throw new EmailErrorException(lastException.getMessage());
-        }
+        var failure = Objects.requireNonNull(lastException);
+        log.error("Error sending email after {} attempts: {}", totalAttempts, failure.getMessage());
+        throw new EmailErrorException(failure.getMessage());
     }
 
     private void sleepBeforeRetry(int attempt) {
         try {
             Thread.sleep(backoffDelayMs(attempt));
-        } catch (InterruptedException ex) {
+        } catch (InterruptedException _) {
             Thread.currentThread().interrupt();
             throw new EmailErrorException("Email retry interrupted.");
         }

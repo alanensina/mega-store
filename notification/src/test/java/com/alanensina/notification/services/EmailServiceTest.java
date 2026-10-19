@@ -22,6 +22,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.times;
 
 @ExtendWith(MockitoExtension.class)
 class EmailServiceTest {
@@ -95,6 +96,66 @@ class EmailServiceTest {
         assertEquals(
                 "Error sending email: mail server unavailable",
                 exception.getMessage());
+    }
+
+    @Test
+    void sendWelcomeEmailShouldRetryAndSendSuccessfully() {
+        setRetryConfiguration(2, 1, 2);
+        doThrow(new IllegalStateException("temporary failure"))
+                .doNothing()
+                .when(sender).send(org.mockito.ArgumentMatchers.any(SimpleMailMessage.class));
+
+        emailService.sendWelcomeEmail(event);
+
+        verify(sender, times(2)).send(org.mockito.ArgumentMatchers.any(SimpleMailMessage.class));
+    }
+
+    @Test
+    void sendWelcomeEmailShouldUseOneAttemptWhenMaxAttemptsIsZero() {
+        setRetryConfiguration(0, 1, 1);
+        doThrow(new IllegalStateException("mail server unavailable"))
+                .when(sender).send(org.mockito.ArgumentMatchers.any(SimpleMailMessage.class));
+
+        EmailErrorException exception = assertThrows(
+                EmailErrorException.class,
+                () -> emailService.sendWelcomeEmail(event));
+
+        assertEquals("Error sending email: mail server unavailable", exception.getMessage());
+        verify(sender).send(org.mockito.ArgumentMatchers.any(SimpleMailMessage.class));
+    }
+
+    @Test
+    void sendWelcomeEmailShouldFailWhenRetryIsInterrupted() {
+        setRetryConfiguration(2, 1, 1);
+        doThrow(new IllegalStateException("temporary failure"))
+                .when(sender).send(org.mockito.ArgumentMatchers.any(SimpleMailMessage.class));
+        Thread.currentThread().interrupt();
+
+        try {
+            EmailErrorException exception = assertThrows(
+                    EmailErrorException.class,
+                    () -> emailService.sendWelcomeEmail(event));
+
+            assertEquals("Error sending email: Email retry interrupted.", exception.getMessage());
+        } finally {
+            Thread.interrupted();
+        }
+    }
+
+    private void setRetryConfiguration(int attempts, long initialDelay, long maxDelay) {
+        setField("maxAttempts", attempts);
+        setField("retryInitialDelayMs", initialDelay);
+        setField("retryMaxDelayMs", maxDelay);
+    }
+
+    private void setField(String name, Object value) {
+        try {
+            var field = EmailService.class.getDeclaredField(name);
+            field.setAccessible(true);
+            field.set(emailService, value);
+        } catch (ReflectiveOperationException exception) {
+            throw new AssertionError(exception);
+        }
     }
 
     private SimpleMailMessage capturedMessage() {

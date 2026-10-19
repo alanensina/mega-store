@@ -220,6 +220,22 @@ class CustomerServiceTest {
     }
 
     @Test
+    void updateShouldKeepCurrentPasswordWhenPasswordIsNull() {
+        Customer existingCustomer = buildCustomer("Alice", "alice@email.com", "alice");
+        UpdateCustomerDTO dto = new UpdateCustomerDTO(customerId, "Alice Updated", "alice.updated@email.com", "aliceupdated", null);
+
+        when(customerRepository.findById(customerId)).thenReturn(Optional.of(existingCustomer));
+        when(customerRepository.existsByUsernameOrEmailForAnotherCustomer("aliceupdated", "alice.updated@email.com", customerId)).thenReturn(false);
+
+        CustomerDTO result = customerService.update(dto);
+
+        assertEquals("Alice Updated", result.name());
+        assertEquals("hashed-password", existingCustomer.getPassword());
+        verify(passwordEncryptionService, never()).encryptPassword(any());
+        verify(customerRepository).save(existingCustomer);
+    }
+
+    @Test
     void updateShouldThrowWhenAnotherCustomerHasSameUsernameOrEmail() {
         Customer existingCustomer = buildCustomer("Alice", "alice@email.com", "alice");
         UpdateCustomerDTO dto = new UpdateCustomerDTO(customerId, "Alice Updated", "alice.updated@email.com", "aliceupdated", "NewPassword123");

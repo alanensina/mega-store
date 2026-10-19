@@ -38,14 +38,14 @@ public class CartIdempotencyService {
             return replay(existingRecord.get(), replayAction);
         }
 
-        var record = CartIdempotencyRecord.builder()
+        var newRecord = CartIdempotencyRecord.builder()
                 .requestKey(normalizedKey)
                 .username(username)
                 .createdAt(LocalDateTime.now(ZoneId.systemDefault()))
                 .build();
 
         try {
-            record = repository.saveAndFlush(record);
+            newRecord = repository.saveAndFlush(newRecord);
         } catch (DataIntegrityViolationException ex) {
             var winner = repository.findByRequestKeyAndUsername(normalizedKey, username)
                     .orElseThrow(() -> ex);
@@ -54,11 +54,11 @@ public class CartIdempotencyService {
 
         try {
             var createdCart = createAction.get();
-            record.setCartId(createdCart.id());
-            repository.save(record);
+            newRecord.setCartId(createdCart.id());
+            repository.save(newRecord);
             return createdCart;
         } catch (RuntimeException ex) {
-            repository.deleteById(record.getId());
+            repository.deleteById(newRecord.getId());
             throw ex;
         }
     }
@@ -71,11 +71,11 @@ public class CartIdempotencyService {
         return trimmed;
     }
 
-    private static CartDTO replay(CartIdempotencyRecord record, Function<UUID, CartDTO> replayAction) {
-        if (record.getCartId() == null) {
-            throw new IdempotencyRequestInProgressException(record.getRequestKey());
+    private static CartDTO replay(CartIdempotencyRecord replayedRecord, Function<UUID, CartDTO> replayAction) {
+        if (replayedRecord.getCartId() == null) {
+            throw new IdempotencyRequestInProgressException(replayedRecord.getRequestKey());
         }
-        return replayAction.apply(record.getCartId());
+        return replayAction.apply(replayedRecord.getCartId());
     }
 
     private static String currentUsername() {

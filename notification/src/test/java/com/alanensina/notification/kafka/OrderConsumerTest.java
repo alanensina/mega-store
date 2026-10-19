@@ -102,12 +102,13 @@ class OrderConsumerTest {
         when(objectMapper.readValue("message", NotificationDTO.class))
                 .thenThrow(new IllegalArgumentException("invalid json"));
         when(objectMapper.readTree("message"))
-                .thenThrow(new IllegalStateException("invalid tree"))
-                .thenReturn(jsonNode);
-        when(jsonNode.path("orderId")).thenReturn(jsonNode);
-        when(jsonNode.asText("unknown")).thenReturn("unknown");
+                .thenThrow(new IllegalStateException("invalid tree"));
 
-        assertThrows(KafkaErrorException.class, () -> consumer.consume("message"));
+        KafkaErrorException exception = assertThrows(
+                KafkaErrorException.class,
+                () -> consumer.consume("message"));
+
+        assertEquals("Error processing Kafka message: invalid json", exception.getMessage());
     }
 
     private void stubOrderIdLookup(String orderId) {

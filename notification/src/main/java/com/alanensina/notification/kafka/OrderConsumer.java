@@ -44,7 +44,7 @@ public class OrderConsumer {
         try {
             return objectMapper.readTree(message).path("orderId").asText("unknown");
         } catch (RuntimeException e) {
-            log.error("Error processing notification for order {}", safeOrderId(message), e);
+            log.error("Error reading order id from notification", e);
             return "unknown";
         }
     }

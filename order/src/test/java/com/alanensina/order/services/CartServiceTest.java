@@ -110,6 +110,39 @@ class CartServiceTest {
     }
 
     @Test
+    void createTreatsBlankIdempotencyKeyAsARegularRequest() {
+        when(cartRepository.saveAndFlush(any(Cart.class))).thenAnswer(invocation -> {
+            Cart savedCart = invocation.getArgument(0);
+            savedCart.setId(cartId);
+            return savedCart;
+        });
+        when(customerApiClient.fetchCustomer(customerId, null)).thenReturn(customer);
+
+        CartDTO result = cartService.create(new CreateCartDTO(customerId, List.of(itemDTO)), "  ");
+
+        assertEquals(cartId, result.id());
+        verify(cartIdempotencyService, never()).executeOrReplay(any(), any(), any());
+    }
+
+    @Test
+    void createUsesIdempotencyServiceForNonBlankKey() {
+        when(cartRepository.saveAndFlush(any(Cart.class))).thenAnswer(invocation -> {
+            Cart savedCart = invocation.getArgument(0);
+            savedCart.setId(cartId);
+            return savedCart;
+        });
+        when(customerApiClient.fetchCustomer(customerId, null)).thenReturn(customer);
+        when(cartIdempotencyService.executeOrReplay(any(), any(), any()))
+                .thenAnswer(invocation -> ((java.util.function.Supplier<CartDTO>) invocation.getArgument(1)).get());
+
+        CartDTO result = cartService.create(new CreateCartDTO(customerId, List.of(itemDTO)), "request-key");
+
+        assertEquals(cartId, result.id());
+        verify(cartIdempotencyService).executeOrReplay(any(), any(), any());
+        verify(customerApiClient).fetchCustomer(customerId, null);
+    }
+
+    @Test
     void listMapsRepositoryResultsToDtos() {
         when(cartRepository.findAll()).thenReturn(List.of(cartWithItem()));
 

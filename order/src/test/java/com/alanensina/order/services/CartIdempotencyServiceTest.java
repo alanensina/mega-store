@@ -25,7 +25,9 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
+import org.springframework.dao.DataIntegrityViolationException;
 
 class CartIdempotencyServiceTest {
 
@@ -51,7 +53,7 @@ class CartIdempotencyServiceTest {
                 .build();
         when(repository.findByRequestKeyAndUsername("k1", "alice")).thenReturn(Optional.of(existing));
 
-        Function<UUID, CartDTO> replay = id -> cartDTO(id);
+        Function<UUID, CartDTO> replay = this::cartDTO;
         Supplier<CartDTO> createAction = () -> {
             throw new AssertionError("Should not create");
         };
@@ -120,6 +122,82 @@ class CartIdempotencyServiceTest {
                 }, this::cartDTO));
 
         verify(repository).deleteById(persisted.getId());
+    }
+
+    @Test
+    void executeOrReplayRejectsBlankKeys() {
+        assertThrows(IllegalArgumentException.class, () ->
+                service.executeOrReplay("  ", () -> cartDTO(UUID.randomUUID()), this::cartDTO));
+        verifyNoInteractions(repository);
+    }
+
+    @Test
+    void executeOrReplayUsesAnonymousForUnauthenticatedRequests() {
+        UUID createdId = UUID.randomUUID();
+        var persisted = CartIdempotencyRecord.builder()
+                .id(UUID.randomUUID())
+                .requestKey("k1")
+                .username("anonymous")
+                .createdAt(LocalDateTime.now())
+                .build();
+        when(repository.findByRequestKeyAndUsername("k1", "anonymous")).thenReturn(Optional.empty());
+        when(repository.saveAndFlush(any(CartIdempotencyRecord.class))).thenReturn(persisted);
+
+        assertEquals(createdId, service.executeOrReplay(
+                " k1 ",
+                () -> cartDTO(createdId),
+                this::cartDTO).id());
+    }
+
+    @Test
+    void executeOrReplayUsesAnonymousForUnauthenticatedAuthentication() {
+        SecurityContextHolder.getContext().setAuthentication(
+                new TestingAuthenticationToken("alice", "pwd"));
+        when(repository.findByRequestKeyAndUsername("k1", "anonymous")).thenReturn(Optional.of(
+                CartIdempotencyRecord.builder()
+                        .requestKey("k1")
+                        .username("anonymous")
+                        .cartId(UUID.randomUUID())
+                        .createdAt(LocalDateTime.now())
+                        .build()));
+
+        service.executeOrReplay("k1", () -> cartDTO(UUID.randomUUID()), this::cartDTO);
+
+        verify(repository).findByRequestKeyAndUsername("k1", "anonymous");
+    }
+
+    @Test
+    void executeOrReplayReplaysWinnerAfterConcurrentInsert() {
+        SecurityContextHolder.getContext().setAuthentication(
+                new TestingAuthenticationToken("alice", "pwd", "ROLE_USER"));
+        UUID cartId = UUID.randomUUID();
+        var winner = CartIdempotencyRecord.builder()
+                .id(UUID.randomUUID())
+                .requestKey("k1")
+                .username("alice")
+                .cartId(cartId)
+                .createdAt(LocalDateTime.now())
+                .build();
+        when(repository.findByRequestKeyAndUsername("k1", "alice"))
+                .thenReturn(Optional.empty(), Optional.of(winner));
+        when(repository.saveAndFlush(any(CartIdempotencyRecord.class)))
+                .thenThrow(new DataIntegrityViolationException("duplicate"));
+
+        assertEquals(cartId, service.executeOrReplay("k1", () -> cartDTO(UUID.randomUUID()), this::cartDTO).id());
+    }
+
+    @Test
+    void executeOrReplayRethrowsConcurrentInsertWhenWinnerCannotBeFound() {
+        SecurityContextHolder.getContext().setAuthentication(
+                new TestingAuthenticationToken("alice", "pwd", "ROLE_USER"));
+        when(repository.findByRequestKeyAndUsername("k1", "alice")).thenReturn(Optional.empty());
+        var exception = new DataIntegrityViolationException("duplicate");
+        when(repository.saveAndFlush(any(CartIdempotencyRecord.class))).thenThrow(exception);
+        when(repository.findByRequestKeyAndUsername("k1", "alice")).thenReturn(Optional.empty(), Optional.empty());
+
+        assertEquals(exception, org.junit.jupiter.api.Assertions.assertThrows(
+                DataIntegrityViolationException.class,
+                () -> service.executeOrReplay("k1", () -> cartDTO(UUID.randomUUID()), this::cartDTO)));
     }
 
     private CartDTO cartDTO(UUID id) {
