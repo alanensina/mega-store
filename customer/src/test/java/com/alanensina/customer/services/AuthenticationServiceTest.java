@@ -5,6 +5,7 @@ import com.alanensina.customer.dtos.CustomerDTO;
 import com.alanensina.customer.dtos.LoginDTO;
 import com.alanensina.customer.exceptions.InvalidCredentialsException;
 import com.alanensina.customer.models.Customer;
+import com.alanensina.customer.security.JwtService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;

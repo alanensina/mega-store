@@ -2,7 +2,6 @@ package com.alanensina.customer.security;
 
 import com.alanensina.customer.exceptions.SecurityFilterChainFailedException;
 import com.alanensina.customer.services.CustomerService;
-import com.alanensina.customer.services.JwtService;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;

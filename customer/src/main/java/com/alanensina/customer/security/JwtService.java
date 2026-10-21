@@ -1,4 +1,4 @@
-package com.alanensina.customer.services;
+package com.alanensina.customer.security;
 
 import com.alanensina.customer.models.Customer;
 import com.auth0.jwt.JWT;
@@ -20,8 +20,8 @@ public class JwtService {
     private final long expirationMs;
     private final JWTVerifier verifier;
 
-    public JwtService(@Value("${jwt.secret:changeit}") String secret,
-                      @Value("${jwt.expiration-ms:3600000}") long expirationMs) {
+    public JwtService(@Value("${jwt.secret}") String secret,
+                      @Value("${jwt.expiration-ms}") long expirationMs) {
         this.algorithm = Algorithm.HMAC256(secret);
         this.expirationMs = expirationMs;
         this.verifier = JWT.require(algorithm).build();

@@ -1,7 +1,6 @@
 package com.alanensina.customer.security;
 
 import com.alanensina.customer.services.CustomerService;
-import com.alanensina.customer.services.JwtService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;

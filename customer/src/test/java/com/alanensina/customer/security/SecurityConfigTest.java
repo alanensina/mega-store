@@ -2,7 +2,6 @@ package com.alanensina.customer.security;
 
 import com.alanensina.customer.exceptions.SecurityFilterChainFailedException;
 import com.alanensina.customer.services.CustomerService;
-import com.alanensina.customer.services.JwtService;
 import jakarta.servlet.http.HttpServletResponse;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;

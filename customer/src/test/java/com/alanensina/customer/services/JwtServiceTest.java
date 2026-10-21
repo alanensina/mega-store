@@ -1,6 +1,7 @@
 package com.alanensina.customer.services;
 
 import com.alanensina.customer.models.Customer;
+import com.alanensina.customer.security.JwtService;
 import org.junit.jupiter.api.Test;
 
 import java.util.UUID;

@@ -6,7 +6,7 @@ import com.alanensina.customer.exceptions.*;
 import com.alanensina.customer.models.Customer;
 import com.alanensina.customer.security.SecurityConfig;
 import com.alanensina.customer.services.CustomerService;
-import com.alanensina.customer.services.JwtService;
+import com.alanensina.customer.security.JwtService;
 import io.swagger.v3.oas.models.OpenAPI;
 import org.junit.jupiter.api.Test;
 import org.mockito.MockedStatic;

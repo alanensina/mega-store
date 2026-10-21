@@ -14,7 +14,7 @@ public class JwtService {
 
     private final JWTVerifier verifier;
 
-    public JwtService(@Value("${jwt.secret:changeit}") String secret) {
+    public JwtService(@Value("${jwt.secret}") String secret) {
         this.verifier = JWT.require(Algorithm.HMAC256(secret)).build();
     }
 
